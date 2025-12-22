@@ -1,0 +1,88 @@
+====================================================================================================
+.gitignore for Python Boilerplate Project
+
+This file tells Git which files and folders to intentionally ignore.
+
+CRITICAL: This file is designed to PREVENT you from accidentally committing
+sensitive credentials (like 'token.json') or large, unnecessary folders
+(like '.venv', 'cache', or 'outputs') to your repository.
+
+This file is SAFE to reuse across all Python boilerplate and application repos.
+====================================================================================================
+
+--- Virtual Environments ---
+
+# Ignore Python virtual environments
+.venv/
+venv/
+env/
+
+
+--- Credentials & Secrets ---
+
+# NEVER commit personal OAuth tokens
+credentials/token.json
+
+# Optional: ignore the master OAuth credentials bundle
+# credentials/credentials.json
+
+# Ignore local environment configuration
+.env
+
+
+--- Python Cache & Logs ---
+
+# Ignore Python bytecode and cache folders
+__pycache__/
+*.py[cod]
+
+# Ignore application logs
+logs/
+
+
+--- Runtime Cache & Generated Outputs ---
+
+# Ignore runtime cache
+cache/
+
+# Ignore generated outputs and binaries
+outputs/
+binary_files/
+
+
+--- Backups (Project-Generated) ---
+
+# Ignore all generated backups
+backups/*
+
+# BUT keep the package initializer
+!backups/__init__.py
+
+
+--- Build & Distribution Artifacts ---
+
+# Ignore PyInstaller and build artifacts
+dist/
+build/
+*.spec
+
+
+--- Jupyter Notebook ---
+
+# Ignore Jupyter checkpoints
+.ipynb_checkpoints/
+
+
+--- IDE-Specific Files ---
+
+# VS Code
+.vscode/
+
+# JetBrains IDEs
+.idea/
+
+
+--- OS-Specific Junk Files ---
+
+.DS_Store
+Thumbs.db
