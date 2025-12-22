@@ -42,13 +42,6 @@ logs/
 
 --- Runtime Cache & Generated Outputs ---
 
-# Ignore runtime cache
-cache/
-
-# Ignore generated outputs and binaries
-outputs/
-binary_files/
-
 
 --- Backups (Project-Generated) ---
 
@@ -80,7 +73,6 @@ build/
 
 # JetBrains IDEs
 .idea/
-
 
 --- OS-Specific Junk Files ---
 
