@@ -503,8 +503,11 @@ def _on_row_double_click(self, event: EventType | None = None) -> None:
 
 ## 📁 Template Files
 
+**Source:** `.ai_instruction/templates/`
+
 | File | Purpose |
 |------|---------|
+| `script_templates.py` | Starting point for non-GUI scripts |
 | `Gx0a_design_template.py` | Starting point for page design layer |
 | `Gx0b_control_template.py` | Starting point for page controller layer |
 
@@ -517,8 +520,9 @@ G2x      = GUI 2 pages (G20a/b, G21a/b, G22a/b, ...)
 ```
 
 **Workflow:**
-1. Copy both templates
+1. Copy template from `.ai_instruction/templates/`
 2. Rename to match your GUI (e.g., `G10a_main_design.py`, `G10b_main_controller.py`)
-3. Update placeholders: `{{FILENAME}}`, `{{AUTHOR}}`, `{{DATE}}`, etc.
-4. Design layout in Gx0a, wire events in Gx0b
-5. Run via Gx0b (the controller is the entry point)
+3. Place in target folder (`gui/` for pages)
+4. Update placeholders: `{{FILENAME}}`, `{{AUTHOR}}`, `{{DATE}}`, etc.
+5. Design layout in Gx0a, wire events in Gx0b
+6. Run via Gx0b (the controller is the entry point)

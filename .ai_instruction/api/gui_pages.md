@@ -173,11 +173,16 @@ app.register_page("search", SearchPageDesign)      # ✗ No controller wiring
 
 ## File Pairing
 
+**Template Source:**
 ```
-gui/
+.ai_instruction/templates/
 ├── Gx0a_design_template.py           ← Copy for new pages
 ├── Gx0b_control_template.py          ← Copy for new pages
-│
+```
+
+**Target Location (after copying and renaming):**
+```
+gui/
 ├── G10a_main_design.py               ← GUI 1: Main page design
 ├── G10b_main_controller.py           ← GUI 1: Main page controller
 ├── G11a_settings_design.py           ← GUI 1: Settings page design

@@ -326,13 +326,23 @@ Internal engineering documentation:
 
 ### `templates/`
 
-Script templates for creating new Python files.
+**Note:** This project folder is for project-specific templates. The canonical PyBaseEnv templates live in `.ai_instruction/templates/`.
+
+---
+
+### `.ai_instruction/templates/`
+
+Script templates for creating new Python files. **All templates live here.**
 
 - `script_templates.py` — General non-GUI scripts
+- `Gx0a_design_template.py` — GUI design layer template
+- `Gx0b_control_template.py` — GUI control layer template
 
-**GUI templates in `gui/` folder:**
-- `Gx0a_design_template.py` — GUI design layer template (copy for new pages)
-- `Gx0b_control_template.py` — GUI control layer template (copy for new pages)
+**Workflow:**
+1. Copy template from `.ai_instruction/templates/`
+2. Rename to match target (e.g., `G10a_main_design.py`)
+3. Place in target folder (`gui/` for GUI pages, `implementation/` for scripts)
+4. Replace all `{{PLACEHOLDER}}` values
 
 **Rules:**
 - Copy templates, do not edit originals
@@ -401,7 +411,9 @@ After folder creation, copy these from the boilerplate:
 | `api/*.md` | `.ai_instruction/api/` | API documentation |
 | `C00_set_packages.py` | `core/` | External package hub |
 | `C01_logging_handler.py` | `core/` | Logging infrastructure |
-| `script_templates.py` | `templates/` | General script template |
+| `script_templates.py` | `.ai_instruction/templates/` | General script template |
+| `Gx0a_design_template.py` | `.ai_instruction/templates/` | GUI design layer template |
+| `Gx0b_control_template.py` | `.ai_instruction/templates/` | GUI control layer template |
 | `G00a_gui_packages.py` | `gui/` | GUI package hub (if GUI project) |
 | `G01*–G04*` | `gui/` | GUI framework modules (if GUI project) |
 

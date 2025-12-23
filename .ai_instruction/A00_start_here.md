@@ -44,7 +44,7 @@ All documentation must be read in full, in order. Each phase builds on the previ
 | Phase | Documents | Purpose |
 |-------|-----------|---------|
 | 1. Governance | `A00` → `A01_rules.md` → `A02_process.md` → `A03_audit.md` | How to behave, what's prohibited, how to audit |
-| 2. Templates | `templates/project_structures.md`, `templates/script_templates.py` | Exact patterns for new files |
+| 2. Templates | `.ai_instruction/templates/project_structures.md`, `.ai_instruction/templates/script_templates.py` | Exact patterns for new files |
 | 3. Core API | `api/core_foundation.md` → `api/core_utilities.md` → `api/core_integrations.md` | Full function signatures, patterns, dependencies |
 | 4. Consolidation | `api/core_quick_lookup.md` | Verify understanding — task → function index |
 
@@ -53,7 +53,7 @@ All documentation must be read in full, in order. Each phase builds on the previ
 | Phase | Documents | Purpose |
 |-------|-----------|---------|
 | 1. Governance | `A00` → `A01_rules.md` → `A02_process.md` → `A03_audit.md` | How to behave, what's prohibited, how to audit |
-| 2. Templates | `templates/project_structures.md`, `templates/script_templates.py`, `templates/Gx0a_design_template.py`, `templates/Gx0b_control_template.py` | Exact patterns for new files |
+| 2. Templates | `.ai_instruction/templates/project_structures.md`, `.ai_instruction/templates/script_templates.py`, `.ai_instruction/templates/Gx0a_design_template.py`, `.ai_instruction/templates/Gx0b_control_template.py` | Exact patterns for new files |
 | 3. Core API | `api/core_foundation.md` → `api/core_utilities.md` → `api/core_integrations.md` | Full function signatures, patterns, dependencies |
 | 4. GUI API | `api/gui_foundation.md` → `api/gui_patterns.md` → `api/gui_orchestration.md` → `api/gui_pages.md` | GUI architecture, widgets, patterns, page contract |
 | 5. Consolidation | `api/core_quick_lookup.md` → `api/gui_quick_lookup.md` | Verify understanding — task → function index |
@@ -247,9 +247,9 @@ You are succeeding when:
 | Understand the rules | `A01_rules.md` |
 | Know how to work | `A02_process.md` |
 | Run a compliance audit | `A03_audit.md` |
-| See project folder structures | `templates/project_structures.md` |
-| Create a new script | `templates/script_templates.py` |
-| Create a GUI page | `templates/Gx0a_design_template.py` + `templates/Gx0b_control_template.py` |
+| See project folder structures | `.ai_instruction/templates/project_structures.md` |
+| Create a new script | `.ai_instruction/templates/script_templates.py` |
+| Create a GUI page | `.ai_instruction/templates/Gx0a_design_template.py` + `.ai_instruction/templates/Gx0b_control_template.py` |
 | Look up a Core function | `api/core_quick_lookup.md` (after reading detailed docs) |
 | Look up a GUI function | `api/gui_quick_lookup.md` (after reading detailed docs) |
 
