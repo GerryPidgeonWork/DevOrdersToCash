@@ -45,112 +45,328 @@ If you realise a previous response violated these rules:
 **Severity definitions:**
 | Severity | Examples | Action |
 |----------|----------|--------|
-| CRITICAL | Wrong imports, missing bootstrap, code outside Section 99, no logger | Must fix before delivery |
-| MAJOR | Missing `__all__`, missing docstrings, wrong template structure | Must fix before delivery |
-| MINOR | Naming style, formatting, missing Notes in docstring | Note and fix if time permits |
+| CRITICAL | Wrong imports, modified Section 1/2, code outside Section 99, no logger | Must fix before delivery |
+| MAJOR | Missing `__all__`, missing docstrings, reimplemented Core functions, wrong template structure | Must fix before delivery |
+| MINOR | Naming style, formatting, unused imports, imported but unused Core functions | Note and fix if time permits |
 
 **Minor violations policy:**
 - MINOR issues are acceptable for delivery if user is time-constrained
 - MINOR issues are NOT acceptable in new Core modules (C00–C20) or GUI framework (G00–G04)
 - Always note any MINOR issues in your response, even if not fixed
 
-**Critical violations include:**
-- Bypassing C00_set_packages for external imports
-- Bypassing G02a facade in Gx0+ pages
-- Missing or modified Section 1 bootstrap
-- Executable code outside Section 99
-- Missing logger initialisation
-- Business logic in Gx0a design layer
-- Widget creation in Gx0b control layer
-- Missing `__all__` declaration
-- No docstrings on public functions
-
 ---
 
 ## Audit Prompt
 
 ```
-Audit this Python file against PyBaseEnv coding standards. Report ALL violations with line numbers.
+Audit this Python file against PyBaseEnv coding standards using the TWO-PASS process below.
+Report ALL violations with line numbers.
 
-## STRUCTURAL CHECKS
+================================================================================
+PASS 1: MECHANICAL CHECKS (Deterministic — No Judgment Required)
+================================================================================
 
-□ Section 1 (System Imports) — Must contain exact bootstrap:
-  - `from __future__ import annotations`
-  - `import sys`
-  - `from pathlib import Path`
-  - project_root setup
-  - sys.path manipulation
-  - `sys.dont_write_bytecode = True`
-  
-□ Section 2 (Project Imports) — Must contain:
-  - `from core.C00_set_packages import *`
-  - `from core.C01_logging_handler import get_logger, log_exception, init_logging`
-  - `logger = get_logger(__name__)`
+Run these checks FIRST. They are grep-able. If ANY fail, stop and fix before Pass 2.
 
-□ Sections numbered correctly: 1, 2, 3, 98, 99 (no other section numbers)
+## Section 1 Required Lines
 
-□ Section 98 contains `__all__ = [...]`
+Section 1 must contain ALL of these exact strings. Missing ANY = CRITICAL.
 
-□ Section 99 contains:
-  - `def main()` function
-  - `if __name__ == "__main__":` block
-  - `init_logging()` call
+| # | Required Line | Grep Pattern |
+|---|---------------|--------------|
+| 1 | `# 1. SYSTEM IMPORTS` | `# 1. SYSTEM IMPORTS` |
+| 2 | `# These imports (sys, pathlib.Path) are required` | `These imports.*sys.*pathlib` |
+| 3 | `# --- Future behaviour & type system enhancements` | `Future behaviour.*type system` |
+| 4 | `from __future__ import annotations` with comment | `from __future__ import annotations.*#` |
+| 5 | `# --- Required for dynamic path handling` | `Required for dynamic path handling` |
+| 6 | `import sys` with inline comment | `import sys\s+#` |
+| 7 | `from pathlib import Path` with inline comment | `from pathlib import Path\s+#` |
+| 8 | `# --- Ensure project root DOES NOT override` | `Ensure project root DOES NOT override` |
+| 9 | `# --- Remove '' (current working directory)` | `Remove '' \(current working directory\)` |
+| 10 | `# --- Prevent creation of __pycache__` | `Prevent creation of __pycache__` |
+| 11 | `sys.dont_write_bytecode = True` | `sys.dont_write_bytecode = True` |
 
-□ No executable code outside Section 99 (no module-level function calls, no print statements, no object instantiation)
+**For nested files (in `implementation/subfolder/`):**
+| 12 | `# Note: .parent.parent.parent because this file is in` | `Note:.*\.parent\.parent\.parent.*because` |
 
-## IMPORT CHECKS
+## Section 2 Required Lines
 
-□ No direct external imports (pandas, requests, datetime, json, etc. must come from C00)
-□ No `import tkinter` or `from tkinter import` (must use G00a or G02a)
-□ No imports from higher-numbered modules (C03 cannot import C05, G01 cannot import G02)
-□ GUI pages (Gx0+) import from G02a only, never G00a
+| # | Required Line | Grep Pattern |
+|---|---------------|--------------|
+| 1 | `# 2. PROJECT IMPORTS` | `# 2. PROJECT IMPORTS` |
+| 2 | `# Bring in shared external and standard-library` | `Bring in shared external` |
+| 3 | `# CRITICAL ARCHITECTURE RULE:` | `CRITICAL ARCHITECTURE RULE` |
+| 4 | `from core.C00_set_packages import *` | `from core\.C00_set_packages import \*` |
+| 5 | `# --- Initialise module-level logger` | `Initialise module-level logger` |
+| 6 | `from core.C01_logging_handler import` | `from core\.C01_logging_handler import` |
+| 7 | `logger = get_logger(__name__)` | `logger = get_logger\(__name__\)` |
+| 8 | `# --- Additional project-level imports` | `Additional project-level imports` |
 
-## CODE QUALITY CHECKS
+## Section 98/99 Required Patterns
 
-□ No `print()` statements (use logger.info, logger.debug, etc.)
-□ All public functions have docstrings with Description section
-□ All functions have type hints (parameters and return type)
-□ Exception handling uses `log_exception()` not bare `except:`
-□ No magic numbers in GUI code (must use SPACING_*, colour presets)
+| # | Required Pattern | Grep Pattern |
+|---|------------------|--------------|
+| 1 | `# 98.` section header | `# 98\.` |
+| 2 | `__all__ = [` declaration | `__all__\s*=\s*\[` |
+| 3 | `# 99.` section header | `# 99\.` |
+| 4 | `def main(` function | `def main\(` |
+| 5 | `if __name__ == "__main__":` guard | `if __name__ == .__main__.:` |
+| 6 | `init_logging(` call | `init_logging\(` |
 
-## GUI-SPECIFIC CHECKS (if applicable)
+---
 
-□ Design layer (Gx0a) contains no business logic
-□ Design layer (Gx0a) contains no event handler wiring (no `command=`, no `.bind()`)
-□ Control layer (Gx0b) creates no widgets (except header action buttons)
-□ Widget references use type aliases (EntryType, ButtonType, etc.)
-□ No raw hex colours (use colour presets)
+## IMMEDIATE FAIL CONDITIONS
+
+If ANY of these patterns are found, the file FAILS immediately (CRITICAL).
+
+### Section 1/2 Violations
+| Pattern Found | Violation |
+|---------------|-----------|
+| `# 1. SYSTEM IMPORTS` missing or altered | Modified locked section |
+| `# 2. PROJECT IMPORTS` missing or altered | Modified locked section |
+| Any of the inline `# ---` comment headers missing | Incomplete template |
+| Wrong `.parent` count for file depth | Incorrect path resolution |
+| Nested file missing `# Note:` comment | Undocumented path depth |
+| `from core.C03_` used for logging | Wrong logging import (must be C01) |
+
+### Import Violations
+| Pattern Found | Violation |
+|---------------|-----------|
+| `import pandas` (standalone) | Direct external import |
+| `import datetime` (standalone) | Direct external import |
+| `import requests` (standalone) | Direct external import |
+| `import json` (standalone) | Direct external import |
+| `from datetime import` | Direct external import |
+| `import tkinter` / `from tkinter` | Direct GUI import |
+| `import os` (standalone) | Direct external import |
+
+### Code Structure Violations
+| Pattern Found | Violation |
+|---------------|-----------|
+| `print(` anywhere in file | Debug output instead of logger |
+| Missing `logger = get_logger(__name__)` | No logger initialisation |
+| Missing `__all__ = [` | No public API declaration |
+| Missing `def main(` | No main function wrapper |
+| Function/method call at module level | Executable code at import time |
+
+---
+
+================================================================================
+PASS 2: SEMANTIC CHECKS (Judgment Required)
+================================================================================
+
+Run these AFTER Pass 1 succeeds. These require reading and understanding the code.
+
+## Core Function Reuse
+
+Scan the entire file against `A04_anti_patterns.md`. For each anti-pattern found:
+1. Note the line number
+2. Identify which Core function should be used instead
+3. Flag as MAJOR violation
+
+**Common anti-patterns (see A04 for complete 150+ list):**
+
+| If you see... | Should use instead (from) | Severity |
+|---------------|---------------------------|----------|
+| `Path(__file__).parent.parent` for project root | `PROJECT_ROOT` (C02) | MAJOR |
+| `os.makedirs(path, exist_ok=True)` | `ensure_directory(path)` (C02) | MAJOR |
+| `.mkdir(parents=True, exist_ok=True)` | `ensure_directory(path)` (C02) | MAJOR |
+| `platform.system()` | `detect_os()` (C03) | MAJOR |
+| `yaml.safe_load(open(...))` | `initialise_config()` + `get_config()` (C04) | MAJOR |
+| `sys.exit(1)` on error | `handle_error(exc, fatal=True)` (C05) | MAJOR |
+| `os.path.exists(path)` | `file_exists()` / `dir_exists()` (C06) | MAJOR |
+| `.exists()` on Path object | `file_exists()` / `dir_exists()` (C06) | MAJOR |
+| `datetime.now()` / `date.today()` | `get_now()` / `get_today()` (C07) | MAJOR |
+| `.strftime(fmt)` | `format_date(date, fmt)` / `as_str()` (C07) | MAJOR |
+| `timedelta(days=6)` for week end | `get_end_of_week()` (C07) | MAJOR |
+| `pd.read_csv(path)` | `read_csv_file(path)` (C09) | MAJOR |
+| `df.to_csv(path)` | `save_dataframe(df, path)` (C09) | MAJOR |
+| `json.load(f)` / `json.dump()` | `read_json()` / `save_json()` (C09) | MAJOR |
+| `pdfplumber.open()` | `extract_pdf_text()` (C10) | MAJOR |
+| `shutil.copy()` for backups | `create_backup()` (C11) | MAJOR |
+| `snowflake.connector.connect()` | `connect_to_snowflake()` (C14) | MAJOR |
+| `pickle.dump()` / `pickle.load()` | `save_cache()` / `load_cache()` (C15) | MAJOR |
+| `ThreadPoolExecutor` / `ProcessPoolExecutor` | `run_in_parallel()` (C16) | MAJOR |
+| `requests.get()` / `requests.post()` | `get_json()` / `api_request()` (C17) | MAJOR |
+| `webdriver.Chrome()` | `get_chrome_driver()` (C18) | MAJOR |
+| `build('drive', 'v3', credentials=...)` | `get_drive_service()` (C19) | MAJOR |
+| `messagebox.showinfo()` | `show_info()` (C20) | MAJOR |
+
+## Docstring Quality
+
+- Every public function (listed in `__all__`) must have a docstring — MAJOR if missing
+- Docstring must include at minimum: Description section
+- Private functions (not in `__all__`) should have docstrings — MINOR if missing
+
+## Type Hints
+
+- All function parameters should have type hints — MINOR if missing
+- All functions should have return type hints — MINOR if missing
+
+## GUI-Specific Checks (if applicable)
+
+| Check | Violation Level |
+|-------|-----------------|
+| Design layer (Gx0a) contains business logic | CRITICAL |
+| Design layer (Gx0a) has `command=` on buttons | CRITICAL |
+| Design layer (Gx0a) has `.bind()` calls | CRITICAL |
+| Control layer (Gx0b) creates widgets (except header actions) | CRITICAL |
+| Imports from G00a instead of G02a facade | CRITICAL |
+| Raw hex colours instead of presets | MAJOR |
+| Magic numbers instead of SPACING_* constants | MAJOR |
+| Widget references without type aliases | MINOR |
+
+---
 
 ## OUTPUT FORMAT
 
 For each violation found, report:
-- ❌ [RULE] Line X: Description of violation
-- Severity: CRITICAL / MAJOR / MINOR
-
-(See "Severity definitions" table above for classification)
+```
+❌ [PASS 1/2] [RULE] Line X: Description of violation
+   Severity: CRITICAL / MAJOR / MINOR
+   Fix: What should be done instead
+```
 
 End with:
-- Total violations: X (Y critical, Z major, W minor)
-- Verdict: PASS (0 critical, 0 major) / FAIL
+```
+════════════════════════════════════════
+AUDIT SUMMARY
+════════════════════════════════════════
+Pass 1 (Mechanical): X violations
+Pass 2 (Semantic):   Y violations
+────────────────────────────────────────
+Total: X+Y (A critical, B major, C minor)
+Verdict: PASS / FAIL
+════════════════════════════════════════
+```
 ```
 
 ---
 
-## Quick Audit (Abbreviated)
+## Section 1 Template Reference
 
-For fast checks, use this shorter version:
+**IMPORTANT:** Section 1 has TWO variants based on file location depth.
 
+### Variant A: Files at root or `implementation/` (2 levels to project root)
+```python
+# --- Ensure project root DOES NOT override site-packages --------------------------------------------
+project_root = str(Path(__file__).resolve().parent.parent)
 ```
-Quick audit this Python file:
-1. Imports via C00_set_packages? (no direct pandas/requests/datetime)
-2. Logger initialised with get_logger(__name__)?
-3. Sections numbered 1, 2, 3, 98, 99?
-4. No code outside Section 99?
-5. No print() statements?
-6. All public functions have docstrings?
-7. __all__ declared in Section 98?
 
-Report violations with line numbers.
+### Variant B: Files in `implementation/subfolder/` (3 levels to project root)
+```python
+# --- Ensure project root DOES NOT override site-packages --------------------------------------------
+# Note: .parent.parent.parent because this file is in implementation/subfolder/
+project_root = str(Path(__file__).resolve().parent.parent.parent)
+```
+
+### Complete Section 1 Template (Variant B — nested files)
+
+```python
+# ====================================================================================================
+# 1. SYSTEM IMPORTS
+# ----------------------------------------------------------------------------------------------------
+# These imports (sys, pathlib.Path) are required to correctly initialise the project environment,
+# ensure the core library can be imported safely (including C00_set_packages.py),
+# and prevent project-local paths from overriding installed site-packages.
+# ----------------------------------------------------------------------------------------------------
+
+# --- Future behaviour & type system enhancements -----------------------------------------------------
+from __future__ import annotations           # Future-proof type hinting (PEP 563 / PEP 649)
+
+# --- Required for dynamic path handling and safe importing of core modules ---------------------------
+import sys                                   # Python interpreter access (path, environment, runtime)
+from pathlib import Path                     # Modern, object-oriented filesystem path handling
+
+# --- Ensure project root DOES NOT override site-packages --------------------------------------------
+# Note: .parent.parent.parent because this file is in implementation/subfolder/
+project_root = str(Path(__file__).resolve().parent.parent.parent)
+if project_root not in sys.path:
+    sys.path.append(project_root)
+
+# --- Remove '' (current working directory) which can shadow installed packages -----------------------
+if "" in sys.path:
+    sys.path.remove("")
+
+# --- Prevent creation of __pycache__ folders ---------------------------------------------------------
+sys.dont_write_bytecode = True
+```
+
+### Complete Section 2 Template
+
+```python
+# ====================================================================================================
+# 2. PROJECT IMPORTS
+# ----------------------------------------------------------------------------------------------------
+# Bring in shared external and standard-library packages from the central import hub.
+#
+# CRITICAL ARCHITECTURE RULE:
+#   ALL external (and commonly-used standard-library) packages must be imported exclusively via:
+#       from core.C00_set_packages import *
+#   No other script may import external libraries directly.
+#
+# This module must not import any GUI packages.
+# ----------------------------------------------------------------------------------------------------
+from core.C00_set_packages import *
+
+# --- Initialise module-level logger -----------------------------------------------------------------
+from core.C01_logging_handler import get_logger, log_exception, init_logging
+logger = get_logger(__name__)
+
+# --- Additional project-level imports (append below this line only) ---------------------------------
+# ... your imports here ...
+```
+
+⚠️ **Section 1 and Section 2 are LOCKED. Every comment must match exactly. Spacing must match exactly.**
+
+---
+
+## Quick Audit (Two-Pass)
+
+For fast manual checks, use this abbreviated version:
+
+### Pass 1: Mechanical (30 seconds)
+```
+Grep for MISSING required patterns (expect 1+ match each):
+
+Section 1:
+□ "# --- Future behaviour & type system enhancements"
+□ "# --- Required for dynamic path handling"
+□ "# --- Ensure project root DOES NOT override"
+□ "# --- Remove '' (current working directory)"
+□ "# --- Prevent creation of __pycache__"
+□ "# Note: .parent.parent.parent because" (nested files only)
+
+Section 2:
+□ "# --- Initialise module-level logger"
+□ "# --- Additional project-level imports"
+□ "logger = get_logger(__name__)"
+
+Section 98/99:
+□ "__all__ = ["
+□ "def main("
+□ "init_logging("
+
+FAIL if ANY are missing.
+```
+
+### Pass 2: Anti-Patterns (60 seconds)
+```
+Grep for PRESENT violation patterns (expect 0 matches each):
+
+□ "print(" → CRITICAL
+□ "import pandas" → CRITICAL
+□ "import datetime" (standalone) → CRITICAL
+□ "\.exists()" → MAJOR (use file_exists/dir_exists)
+□ "\.mkdir(" → MAJOR (use ensure_directory)
+□ "datetime\.now()" → MAJOR (use get_now)
+□ "\.strftime(" → MAJOR (use format_date)
+□ "pd\.read_csv(" → MAJOR (use read_csv_file)
+□ "\.to_csv(" → MAJOR (use save_dataframe)
+□ "timedelta(" → MAJOR (check if C07 has function)
+□ "from core.C03_" for logging → CRITICAL (must be C01)
+
+FAIL if ANY CRITICAL or MAJOR found.
 ```
 
 ---
@@ -199,27 +415,85 @@ Report issues with line numbers.
 
 ---
 
-## Self-Audit Reminder
+## Self-Audit Checklist
 
-Before submitting code, developers should verify:
+Before submitting code, verify ALL of these:
 
-- [ ] Started from correct template
-- [ ] All `{{PLACEHOLDER}}` values replaced
-- [ ] Template instruction block deleted
-- [ ] Imports follow hub architecture
-- [ ] Logger initialised
-- [ ] No print() statements
-- [ ] Docstrings on all public functions
-- [ ] `__all__` declared in Section 98
-- [ ] No side-effects at import time
+### Pass 1: Mechanical Checks
+```
+□ Section 1 has ALL 11 required lines (see table above)
+□ Section 1 has Note comment if file is nested
+□ Section 1 uses correct .parent count for file depth
+□ Section 2 has ALL 8 required lines (see table above)
+□ Section 98 exists with __all__ = [...]
+□ Section 99 exists with def main() and if __name__ guard
+□ init_logging() called before main()
+□ No print() statements anywhere
+□ No standalone external imports (pandas, datetime, json, os, requests)
+□ Logging imports from C01 (not C03)
+```
 
-For GUI additionally:
+### Pass 2: Semantic Checks
+```
+□ No patterns from A04_anti_patterns.md detected
+□ All public functions have docstrings
+□ All functions have type hints
+□ Core functions used where available (not reimplemented)
+□ Exception handling uses log_exception()
+```
 
-- [ ] Design/Control separation respected
-- [ ] Imports from G02a facade only
-- [ ] Widget references use type aliases
-- [ ] ControlledPage wrapper used for registration
+### GUI Additional Checks (if applicable)
+```
+□ Design/Control separation respected
+□ Imports from G02a facade only
+□ No command= or .bind() in design layer
+□ No widget creation in control layer
+□ Widget references use type aliases
+□ ControlledPage wrapper used for registration
+```
 
 ---
 
-**You have completed the mandatory reading.** Next: read `api/core_quick_lookup.md` (and `gui_quick_lookup.md` for GUI) to know what functions exist. Then implement your task, audit against the checks above, and only deliver when PASS is achieved.
+## Self-Audit Commands (Copy-Paste Ready)
+
+Run these terminal commands to verify compliance:
+
+### Verify Section 1/2 Structure (expect 1 for each)
+```bash
+grep -c "# --- Future behaviour" FILE.py
+grep -c "# --- Required for dynamic path" FILE.py
+grep -c "# --- Ensure project root" FILE.py
+grep -c "# --- Remove ''" FILE.py
+grep -c "# --- Prevent creation" FILE.py
+grep -c "# --- Initialise module-level" FILE.py
+grep -c "# --- Additional project-level" FILE.py
+
+# For nested files only (expect 1):
+grep -c "# Note:.*parent.*parent.*parent" FILE.py
+```
+
+### Verify No Anti-Patterns (expect 0 for each)
+```bash
+grep -c "^import pandas" FILE.py
+grep -c "^import datetime" FILE.py
+grep -c "^import json" FILE.py
+grep -c "^import os" FILE.py
+grep -c "print(" FILE.py
+grep -c "\.exists()" FILE.py
+grep -c "\.mkdir(" FILE.py
+grep -c "pd\.read_csv(" FILE.py
+grep -c "\.to_csv(" FILE.py
+grep -c "from core\.C03_" FILE.py
+```
+
+### Verify Required Patterns (expect 1+ for each)
+```bash
+grep -c "__all__" FILE.py
+grep -c "def main(" FILE.py
+grep -c "init_logging(" FILE.py
+grep -c "logger = get_logger" FILE.py
+```
+
+---
+
+**You have completed the mandatory reading.** Next: read `api/core_quick_lookup.md` (and `gui_quick_lookup.md` for GUI) to know what functions exist. Then implement your task, audit using the two-pass process above, and only deliver when PASS is achieved.

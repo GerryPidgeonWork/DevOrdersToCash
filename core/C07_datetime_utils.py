@@ -282,6 +282,45 @@ def parse_date(value: str, fmt: str | None = DEFAULT_DATE_FORMAT) -> date:
     raise error
 
 
+def try_parse_date(value: Any, fmt: str | None = None) -> date | None:
+    """
+    Description:
+        Safely parses a value into a date, returning None instead of raising
+        on failure. Handles None, empty strings, pd.isna(), and unparseable
+        values gracefully.
+
+    Args:
+        value (Any): The input value to parse. Can be str, None, or any type
+            that can be converted to string.
+        fmt (str | None): The specific format used for parsing. If None,
+            automatic multi-format detection is used (same as parse_date).
+            Defaults to None for maximum flexibility.
+
+    Returns:
+        date | None: The parsed date, or None if parsing fails for any reason.
+
+    Raises:
+        None. This function never raises — it returns None on any failure.
+
+    Notes:
+        - Wrapper around parse_date() that catches exceptions.
+        - Use this when parsing user input, CSV data, or any source where
+          empty/invalid values are expected.
+        - Use parse_date() directly when you want strict parsing with errors.
+    """
+    if value is None:
+        return None
+    if isinstance(value, float) and pd.isna(value):
+        return None
+    value_str = str(value).strip()
+    if not value_str:
+        return None
+    try:
+        return parse_date(value_str, fmt)
+    except (ValueError, Exception):
+        return None
+
+
 # --- Week Helpers ------------------------------------------------------------------------------------
 def get_start_of_week(ref_date: date | None = None) -> date:
     """
@@ -603,6 +642,7 @@ __all__ = [
     "get_now",
     "format_date",
     "parse_date",
+    "try_parse_date",
     # --- Week Helpers ---
     "get_start_of_week",
     "get_end_of_week",
