@@ -1,118 +1,37 @@
-# ====================================================================================================
-# SP3.py
-# ----------------------------------------------------------------------------------------------------
-# Scratchpad script for ad-hoc testing, experiments, and quick validation.
-#
-# IMPORTANT:
-#   - This file is NOT production code.
-#   - This file is NOT part of the Core or GUI libraries.
-#   - This file may be freely modified, reset, or deleted.
-#
-# Intended Use:
-#   - Temporary experiments
-#   - Manual tests
-#   - One-off checks during development
-#
-# ----------------------------------------------------------------------------------------------------
-# Author:       Gerry Pidgeon
-# Created:      2026-01-01
-# Project:      PyBaseEnv
-# ====================================================================================================
-
-
-# ====================================================================================================
-# 1. SYSTEM IMPORTS
-# ----------------------------------------------------------------------------------------------------
-# These imports (sys, pathlib.Path) are required to correctly initialise the project environment,
-# ensure the core library can be imported safely (including C00_set_packages.py),
-# and prevent project-local paths from overriding installed site-packages.
-# ----------------------------------------------------------------------------------------------------
-
-# --- Future behaviour & type system enhancements -----------------------------------------------------
-from __future__ import annotations
-
-# --- Required for dynamic path handling and safe importing of core modules ---------------------------
-import sys
+import pandas as pd
 from pathlib import Path
 
-# --- Ensure project root DOES NOT override site-packages ---------------------------------------------
-project_root = str(Path(__file__).resolve().parent.parent)
-if project_root not in sys.path:
-    sys.path.append(project_root)
+# Load DWH data
+dwh_files = list(Path(r"H:\Shared drives\Automation Projects\Accounting\Orders to Cash\04 Deliveroo\03 DWH").glob("*.csv"))
+dwh_df = pd.concat([pd.read_csv(f, low_memory=False) for f in dwh_files])
 
-# --- Remove '' (current working directory) which can shadow installed packages -----------------------
-if "" in sys.path:
-    sys.path.remove("")
+# Load Deliveroo data
+dr_df = pd.read_csv(r"H:\Shared drives\Automation Projects\Accounting\Orders to Cash\04 Deliveroo\04 Consolidated Output\25.12.01 - 26.01.04 - Deliveroo Combined.csv", low_memory=False)
 
-# --- Prevent creation of __pycache__ folders ---------------------------------------------------------
-sys.dont_write_bytecode = True
+# Check timestamp for the problematic Deliveroo order
+print("Deliveroo order 50405289095 details:")
+dr_order = dr_df[dr_df["order_number"] == 50405289095]
+print(dr_order[["order_number", "delivery_datetime_utc", "mfc_name", "order_value_gross", "marketing_offer_discount"]].head(1).to_string())
 
+# Expected value to match
+expected_value = 44.1 + 44.4  # = 88.5
+print(f"\nExpected DWH post_promo_sales_inc_vat: ~£{expected_value}")
 
-# ====================================================================================================
-# 2. PROJECT IMPORTS
-# ----------------------------------------------------------------------------------------------------
-# Bring in shared external and standard-library packages from the central import hub.
-#
-# CRITICAL ARCHITECTURE RULE:
-#   ALL external (and commonly-used standard-library) packages must be imported exclusively via:
-#       from core.C00_set_packages import *
-#   No other script may import external libraries directly.
-#
-# This module must not import any GUI packages.
-# ----------------------------------------------------------------------------------------------------
-from core.C00_set_packages import *
+# Search DWH for any order at this MFC with value close to £88.50
+london_1291 = dwh_df[dwh_df["location_name"] == "LHR_London_1291"]
+close_value = london_1291[
+    (london_1291["post_promo_sales_inc_vat"] > 85) & 
+    (london_1291["post_promo_sales_inc_vat"] < 92)
+]
+print(f"\nDWH orders at LHR_London_1291 with value £85-92:")
+print(close_value[["gp_order_id", "mp_order_id", "created_at_day", "created_at_timestamp", "post_promo_sales_inc_vat"]].head(20).to_string())
 
-# --- Initialise module-level logger ------------------------------------------------------------------
-from core.C01_logging_handler import get_logger, log_exception, init_logging, DEBUG
-logger = get_logger(__name__)
+# Check if any have mp_order_id = 9095
+print(f"\nOf those, with mp_order_id ending in 9095:")
+close_value_9095 = close_value[close_value["mp_order_id"] == 9095]
+print(close_value_9095[["gp_order_id", "mp_order_id", "created_at_day", "post_promo_sales_inc_vat"]].to_string())
 
-# --- Additional project-level imports (append below this line only) ----------------------------------
-# (Scratchpad-only imports are allowed here, but must still respect C00 rules)
-
-
-# ====================================================================================================
-# 3. SCRATCHPAD IMPLEMENTATION
-# ----------------------------------------------------------------------------------------------------
-# Purpose:
-#   Temporary logic for experimentation and testing.
-#
-# Rules:
-#   - No assumptions of stability or reuse.
-#   - Code here may be deleted or rewritten at any time.
-#   - DO NOT promote logic from this section directly into Core or GUI modules.
-#   - If functionality proves reusable, extract it into the appropriate governed module.
-# ====================================================================================================
-
-
-# ====================================================================================================
-# 99. MAIN EXECUTION / SELF-TEST
-# ----------------------------------------------------------------------------------------------------
-# This section is the ONLY location where runtime execution should occur.
-# Rules:
-#   - No side-effects at import time.
-#   - Initialisation (e.g., logging) must be triggered here.
-#   - Any test or demonstration logic should be gated behind __main__.
-# ====================================================================================================
-
-def main() -> None:
-    """
-    Description:
-        Entry point for scratchpad testing.
-    Args:
-        None.
-    Returns:
-        None.
-    Raises:
-        None.
-    Notes:
-        - This is NOT a production entry point.
-        - Keep logic simple and disposable.
-    """
-    logger.info("SP1 scratchpad started.")
-
-    logger.info("SP1 scratchpad finished.")
-
-
-if __name__ == "__main__":
-    init_logging()
-    main()
+# Also search all DWH for mp_order_id = 9095 to see all instances
+print(f"\nAll DWH rows with mp_order_id = 9095:")
+all_9095 = dwh_df[dwh_df["mp_order_id"] == 9095]
+print(all_9095[["gp_order_id", "mp_order_id", "location_name", "created_at_day", "post_promo_sales_inc_vat"]].to_string())

@@ -59,7 +59,9 @@ if "" in sys.path:
 sys.dont_write_bytecode = True
 
 # --- Suppress Pylance warnings for dynamically-added .content attribute (G02a/G03a frames) -----------
+# --- Suppress unused import warnings (imports kept for future use as GUI pattern library) ------------
 # pyright: reportAttributeAccessIssue=false
+# pyright: reportUnusedImport=false
 
 
 # ====================================================================================================
@@ -325,7 +327,7 @@ class MainPage:
         self.google_drive_status: Any = None
 
         # Snowflake Card
-        self.snowflake_user_var: tk.StringVar = None  # type: ignore[assignm    ent]
+        self.snowflake_user_var: tk.StringVar = None  # type: ignore[assignment]
         self.snowflake_default_radio: ttk.Radiobutton = None  # type: ignore[assignment]
         self.snowflake_default_email: str = ""  # Stores the email from Google Drive selection
         self.snowflake_email_var: tk.StringVar = None  # type: ignore[assignment]
@@ -368,6 +370,7 @@ class MainPage:
         self.je_auto_end_label: ttk.Label = None  # Shows calculated Sunday
         self.je_step1_btn: ttk.Button = None  # Parse PDFs button
         self.je_step2_btn: ttk.Button = None  # Reconciliation button
+        self.je_step3_btn: ttk.Button = None  # Produce Accounting Output button
         self.je_status: Any = None  # Status indicator
 
 
@@ -997,7 +1000,7 @@ class MainPage:
             fg_colour="WHITE",
             bg_colour="PRIMARY", bg_shade="MID",
         )
-        self.bt_step1_btn.pack(anchor="w", padx=(0, 0), pady=(0, SPACING_XS))
+        self.bt_step1_btn.pack(anchor="w", padx=(SPACING_XS, 0), pady=(0, SPACING_XS))
 
         # Step 2: Reconciliation
         self.bt_step2_btn = make_button(
@@ -1006,7 +1009,7 @@ class MainPage:
             fg_colour="WHITE",
             bg_colour="PRIMARY", bg_shade="MID",
         )
-        self.bt_step2_btn.pack(anchor="w", padx=(0, 0), pady=(0, SPACING_XS))
+        self.bt_step2_btn.pack(anchor="w", padx=(SPACING_XS, 0), pady=(0, SPACING_XS))
 
         # --- Status Indicator ---
         self.bt_status = make_status_label(
@@ -1082,7 +1085,7 @@ class MainPage:
             fg_colour="WHITE",
             bg_colour="PRIMARY", bg_shade="MID",
         )
-        self.ue_step1_btn.pack(anchor="w", padx=(0, 0), pady=(0, SPACING_XS))
+        self.ue_step1_btn.pack(anchor="w", padx=(SPACING_XS, 0), pady=(0, SPACING_XS))
 
         # Step 2: Reconciliation
         self.ue_step2_btn = make_button(
@@ -1091,7 +1094,7 @@ class MainPage:
             fg_colour="WHITE",
             bg_colour="PRIMARY", bg_shade="MID",
         )
-        self.ue_step2_btn.pack(anchor="w", padx=(0, 0), pady=(0, SPACING_XS))
+        self.ue_step2_btn.pack(anchor="w", padx=(SPACING_XS, 0), pady=(0, SPACING_XS))
 
         # --- Status Indicator ---
         self.ue_status = make_status_label(
@@ -1218,7 +1221,7 @@ class MainPage:
             fg_colour="WHITE",
             bg_colour="PRIMARY", bg_shade="MID",
         )
-        self.dr_step1_btn.pack(anchor="w", padx=(0, 0), pady=(0, SPACING_XS))
+        self.dr_step1_btn.pack(anchor="w", padx=(SPACING_XS, 0), pady=(0, SPACING_XS))
 
         # Step 2: Reconciliation
         self.dr_step2_btn = make_button(
@@ -1227,7 +1230,7 @@ class MainPage:
             fg_colour="WHITE",
             bg_colour="PRIMARY", bg_shade="MID",
         )
-        self.dr_step2_btn.pack(anchor="w", padx=(0, 0), pady=(0, SPACING_XS))
+        self.dr_step2_btn.pack(anchor="w", padx=(SPACING_XS, 0), pady=(0, SPACING_XS))
 
         # MFC Mappings button (opens dialog to view/edit mappings)
         self.dr_mfc_mappings_btn = make_button(
@@ -1236,7 +1239,7 @@ class MainPage:
             fg_colour="WHITE",
             bg_colour="GREY", bg_shade="MID",
         )
-        self.dr_mfc_mappings_btn.pack(anchor="w", padx=(0, 0), pady=(0, SPACING_XS))
+        self.dr_mfc_mappings_btn.pack(anchor="w", padx=(SPACING_XS, 0), pady=(0, SPACING_XS))
 
         # --- Status Indicator ---
         self.dr_status = make_status_label(
@@ -1368,7 +1371,7 @@ class MainPage:
             fg_colour="WHITE",
             bg_colour="PRIMARY", bg_shade="MID",
         )
-        self.je_step1_btn.pack(anchor="w", padx=(0, 0), pady=(0, SPACING_XS))
+        self.je_step1_btn.pack(anchor="w", padx=(SPACING_XS, 0), pady=(0, SPACING_XS))
 
         # Step 2: Reconciliation
         self.je_step2_btn = make_button(
@@ -1377,7 +1380,16 @@ class MainPage:
             fg_colour="WHITE",
             bg_colour="PRIMARY", bg_shade="MID",
         )
-        self.je_step2_btn.pack(anchor="w", padx=(0, 0), pady=(0, SPACING_XS))
+        self.je_step2_btn.pack(anchor="w", padx=(SPACING_XS, 0), pady=(0, SPACING_XS))
+
+        # Step 3: Final Format
+        self.je_step3_btn = make_button(
+            btn_frame.content,
+            text="Step 3: Produce Accounting Output",
+            fg_colour="WHITE",
+            bg_colour="PRIMARY", bg_shade="MID",
+        )
+        self.je_step3_btn.pack(anchor="w", padx=(SPACING_XS, 0), pady=(0, SPACING_XS))
 
         # --- Status Indicator ---
         self.je_status = make_status_label(
@@ -1454,600 +1466,11 @@ class MainPage:
 
 
 # ====================================================================================================
-# 6. MFC MAPPINGS DIALOG (DESIGN)
-# ----------------------------------------------------------------------------------------------------
-# Modal dialog for viewing/editing Deliveroo → GoPuff MFC name mappings.
-# Design only - callbacks are wired by controller (G10b).
-# ====================================================================================================
-
-class MfcMappingsDialog:
-    """Dialog design for viewing/editing Deliveroo MFC mappings.
-
-    Description:
-        Creates a modal dialog with a table of mappings and Add/Edit/Delete buttons.
-        All widget creation happens here; business logic is handled via callbacks.
-
-    Attributes:
-        dialog: The Toplevel window.
-        tree: Treeview widget for the mappings table.
-        add_btn: Add button widget.
-        edit_btn: Edit button widget.
-        delete_btn: Delete button widget.
-        close_btn: Close button widget.
-        count_label: Label showing mapping count.
-        on_add: Callback for add button (set by controller).
-        on_edit: Callback for edit button (set by controller).
-        on_delete: Callback for delete button (set by controller).
-        on_close: Callback for close button (set by controller).
-    """
-
-    def __init__(self) -> None:
-        self.dialog: Any = None
-        self.tree: Any = None
-        self.add_btn: Any = None
-        self.edit_btn: Any = None
-        self.delete_btn: Any = None
-        self.close_btn: Any = None
-        self.count_label: Any = None
-
-        # Callbacks (wired by controller)
-        self.on_add: Callable[[], None] | None = None
-        self.on_edit: Callable[[], None] | None = None
-        self.on_delete: Callable[[], None] | None = None
-        self.on_close: Callable[[], None] | None = None
-
-    def build(self, parent: Any) -> Any:
-        """Build the dialog and all widgets.
-
-        Args:
-            parent: Parent widget (dialog will be modal to this).
-
-        Returns:
-            The Toplevel dialog window.
-        """
-        from gui.G02a_widget_primitives import (
-            make_dialog, make_frame, make_label, make_button,
-            SPACING_XS, SPACING_SM, SPACING_MD,
-        )
-        from gui.G03d_table_patterns import (
-            TableColumn, create_table_with_toolbar,
-        )
-
-        # Create modal dialog
-        self.dialog = make_dialog(
-            parent,
-            title="Deliveroo MFC Mappings",
-            width=650,
-            height=500,
-            modal=True,
-            resizable=True,
-        )
-
-        # Main frame with padding
-        main_frame = make_frame(self.dialog, padding="MD")
-        main_frame.pack(fill="both", expand=True)
-        main_frame.columnconfigure(0, weight=1)
-        main_frame.rowconfigure(2, weight=1)
-
-        # Title label
-        make_label(
-            main_frame,
-            text="Deliveroo → GoPuff MFC Name Mappings",
-            size="LARGE",
-            bold=True,
-        ).grid(row=0, column=0, sticky="w", pady=(0, SPACING_XS))
-
-        # Instructions
-        make_label(
-            main_frame,
-            text="Map Deliveroo restaurant names to GoPuff location names for order matching.",
-            size="SMALL",
-        ).grid(row=1, column=0, sticky="w", pady=(0, SPACING_MD))
-
-        # Create table with toolbar
-        columns = [
-            TableColumn(id="deliveroo_name", heading="Deliveroo Name", width=280),
-            TableColumn(id="gopuff_name", heading="GoPuff Name", width=280),
-        ]
-
-        outer_frame, toolbar, table_result = create_table_with_toolbar(
-            main_frame, columns=columns, height=12, selectmode="browse"
-        )
-        outer_frame.grid(row=2, column=0, sticky="nsew", pady=(0, SPACING_SM))
-
-        self.tree = table_result.treeview
-
-        # Toolbar buttons
-        self.add_btn = make_button(
-            toolbar, text="Add",
-            fg_colour="WHITE", bg_colour="PRIMARY", bg_shade="MID"
-        )
-        self.add_btn.pack(side="left", padx=(0, SPACING_XS))
-
-        self.edit_btn = make_button(
-            toolbar, text="Edit",
-            fg_colour="WHITE", bg_colour="GREY", bg_shade="MID"
-        )
-        self.edit_btn.pack(side="left", padx=(0, SPACING_XS))
-
-        self.delete_btn = make_button(
-            toolbar, text="Delete",
-            fg_colour="WHITE", bg_colour="ERROR"
-        )
-        self.delete_btn.pack(side="left", padx=(0, SPACING_XS))
-
-        # Count label in toolbar
-        self.count_label = make_label(
-            toolbar, text="0 mapping(s)",
-            size="SMALL", italic=True,
-        )
-        self.count_label.pack(side="right", padx=SPACING_XS)
-
-        # Bottom button row
-        bottom_frame = make_frame(main_frame)
-        bottom_frame.grid(row=3, column=0, sticky="ew", pady=(SPACING_SM, 0))
-
-        self.close_btn = make_button(
-            bottom_frame, text="Close",
-            fg_colour="WHITE", bg_colour="GREY", bg_shade="DARK"
-        )
-        self.close_btn.pack(side="right")
-
-        return self.dialog
-
-    def wire_events(self) -> None:
-        """Wire button commands to callbacks. Call after setting callbacks."""
-        if self.on_add and self.add_btn:
-            self.add_btn.configure(command=self.on_add)
-        if self.on_edit and self.edit_btn:
-            self.edit_btn.configure(command=self.on_edit)
-            self.tree.bind("<Double-1>", lambda e: self.on_edit())
-        if self.on_delete and self.delete_btn:
-            self.delete_btn.configure(command=self.on_delete)
-        if self.on_close and self.close_btn:
-            self.close_btn.configure(command=self.on_close)
-
-    def update_count(self, count: int) -> None:
-        """Update the mapping count label."""
-        if self.count_label:
-            self.count_label.configure(text=f"{count} mapping(s)")
-
-    def destroy(self) -> None:
-        """Close and destroy the dialog."""
-        if self.dialog:
-            self.dialog.destroy()
-
-
-class MfcMappingEntryDialog:
-    """Dialog design for adding/editing a single MFC mapping.
-
-    Description:
-        Simple form dialog with Deliveroo name and GoPuff name fields.
-        Used as sub-dialog of MfcMappingsDialog.
-
-    Attributes:
-        dialog: The Toplevel window.
-        dr_entry: Entry for Deliveroo name.
-        gp_entry: Entry for GoPuff name.
-        save_btn: Save button.
-        cancel_btn: Cancel button.
-        on_save: Callback for save (set by controller).
-        on_cancel: Callback for cancel (set by controller).
-    """
-
-    def __init__(self) -> None:
-        self.dialog: Any = None
-        self.dr_entry: Any = None
-        self.gp_entry: Any = None
-        self.save_btn: Any = None
-        self.cancel_btn: Any = None
-
-        # Callbacks
-        self.on_save: Callable[[], None] | None = None
-        self.on_cancel: Callable[[], None] | None = None
-
-    def build(
-        self,
-        parent: Any,
-        title: str = "Add MFC Mapping",
-        initial_dr_name: str = "",
-        initial_gp_name: str = "",
-    ) -> Any:
-        """Build the entry dialog.
-
-        Args:
-            parent: Parent dialog window.
-            title: Dialog title.
-            initial_dr_name: Initial value for Deliveroo name field.
-            initial_gp_name: Initial value for GoPuff name field.
-
-        Returns:
-            The Toplevel dialog window.
-        """
-        from gui.G02a_widget_primitives import (
-            make_dialog, make_frame, make_label, make_entry, make_button,
-            SPACING_XS, SPACING_MD,
-        )
-
-        self.dialog = make_dialog(
-            parent,
-            title=title,
-            width=420,
-            height=160,
-            modal=True,
-            resizable=False,
-        )
-
-        # Main frame
-        main_frame = make_frame(self.dialog, padding="MD")
-        main_frame.pack(fill="both", expand=True)
-        main_frame.columnconfigure(1, weight=1)
-
-        # Deliveroo name field
-        make_label(main_frame, text="Deliveroo Name:", size="SMALL").grid(
-            row=0, column=0, sticky="w", pady=SPACING_XS
-        )
-        self.dr_entry = make_entry(main_frame, width=45)
-        self.dr_entry.grid(row=0, column=1, sticky="ew", pady=SPACING_XS, padx=(SPACING_XS, 0))
-        if initial_dr_name:
-            self.dr_entry.insert(0, initial_dr_name)
-
-        # GoPuff name field
-        make_label(main_frame, text="GoPuff Name:", size="SMALL").grid(
-            row=1, column=0, sticky="w", pady=SPACING_XS
-        )
-        self.gp_entry = make_entry(main_frame, width=45)
-        self.gp_entry.grid(row=1, column=1, sticky="ew", pady=SPACING_XS, padx=(SPACING_XS, 0))
-        if initial_gp_name:
-            self.gp_entry.insert(0, initial_gp_name)
-
-        # Button row
-        btn_frame = make_frame(main_frame)
-        btn_frame.grid(row=2, column=0, columnspan=2, pady=(SPACING_MD, 0))
-
-        self.save_btn = make_button(
-            btn_frame, text="Save",
-            fg_colour="WHITE", bg_colour="PRIMARY", bg_shade="MID"
-        )
-        self.save_btn.pack(side="left", padx=SPACING_XS)
-
-        self.cancel_btn = make_button(
-            btn_frame, text="Cancel",
-            fg_colour="WHITE", bg_colour="GREY", bg_shade="MID"
-        )
-        self.cancel_btn.pack(side="left", padx=SPACING_XS)
-
-        # Focus the appropriate field
-        if initial_gp_name:
-            self.gp_entry.focus_set()
-            self.gp_entry.select_range(0, "end")
-        else:
-            self.dr_entry.focus_set()
-
-        return self.dialog
-
-    def wire_events(self) -> None:
-        """Wire button commands to callbacks."""
-        if self.on_save and self.save_btn:
-            self.save_btn.configure(command=self.on_save)
-        if self.on_cancel and self.cancel_btn:
-            self.cancel_btn.configure(command=self.on_cancel)
-
-    def get_values(self) -> Tuple[str, str]:
-        """Get current field values.
-
-        Returns:
-            Tuple of (deliveroo_name, gopuff_name).
-        """
-        dr_name = self.dr_entry.get().strip() if self.dr_entry else ""
-        gp_name = self.gp_entry.get().strip() if self.gp_entry else ""
-        return dr_name, gp_name
-
-    def destroy(self) -> None:
-        """Close and destroy the dialog."""
-        if self.dialog:
-            self.dialog.destroy()
-
-
-# ====================================================================================================
-# 7. UNMAPPED MFC DIALOG (DESIGN)
-# ----------------------------------------------------------------------------------------------------
-# Modal dialog for mapping unmapped MFCs before processing.
-# Design only - callbacks are wired by controller (G10b).
-# ====================================================================================================
-
-class UnmappedMfcDialog:
-    """Dialog design for mapping unmapped MFC names.
-
-    Description:
-        Shows a table of unmapped Deliveroo names that need GoPuff mappings.
-        User must map all before continuing.
-
-    Attributes:
-        dialog: The Toplevel window.
-        tree: Treeview widget for the unmapped items.
-        set_btn: Set GoPuff Name button.
-        continue_btn: Continue button (disabled until all mapped).
-        cancel_btn: Cancel button.
-        status_label: Label showing remaining count.
-        result: Dict tracking completion state.
-        on_set_name: Callback for set button.
-        on_continue: Callback for continue button.
-        on_cancel: Callback for cancel button.
-    """
-
-    def __init__(self) -> None:
-        self.dialog: Any = None
-        self.tree: Any = None
-        self.set_btn: Any = None
-        self.continue_btn: Any = None
-        self.cancel_btn: Any = None
-        self.status_label: Any = None
-        self.result: Dict[str, bool] = {"completed": False}
-
-        # Callbacks
-        self.on_set_name: Callable[[], None] | None = None
-        self.on_continue: Callable[[], None] | None = None
-        self.on_cancel: Callable[[], None] | None = None
-
-    def build(self, parent: Any, unmapped_count: int) -> Any:
-        """Build the unmapped MFC dialog.
-
-        Args:
-            parent: Parent widget.
-            unmapped_count: Number of unmapped items (for title).
-
-        Returns:
-            The Toplevel dialog window.
-        """
-        from gui.G02a_widget_primitives import (
-            make_dialog, make_frame, make_label, make_button,
-            SPACING_XS, SPACING_SM, SPACING_MD,
-        )
-        from gui.G03d_table_patterns import (
-            TableColumn, create_table_with_toolbar,
-        )
-
-        self.dialog = make_dialog(
-            parent,
-            title="Map Unmapped MFCs",
-            width=700,
-            height=550,
-            modal=True,
-            resizable=True,
-        )
-
-        # Main frame
-        main_frame = make_frame(self.dialog, padding="MD")
-        main_frame.pack(fill="both", expand=True)
-        main_frame.columnconfigure(0, weight=1)
-        main_frame.rowconfigure(2, weight=1)
-
-        # Title
-        make_label(
-            main_frame,
-            text=f"Found {unmapped_count} Unmapped MFC(s)",
-            size="LARGE",
-            bold=True,
-        ).grid(row=0, column=0, sticky="w", pady=(0, SPACING_XS))
-
-        # Instructions
-        make_label(
-            main_frame,
-            text="Please provide the GoPuff location name for each Deliveroo restaurant.\n"
-                 "Double-click a row or select and click 'Set GoPuff Name' to map.",
-            size="SMALL",
-        ).grid(row=1, column=0, sticky="w", pady=(0, SPACING_MD))
-
-        # Table with toolbar
-        columns = [
-            TableColumn(id="deliveroo_name", heading="Deliveroo Name", width=300),
-            TableColumn(id="gopuff_name", heading="GoPuff Name", width=300),
-        ]
-
-        outer_frame, toolbar, table_result = create_table_with_toolbar(
-            main_frame, columns=columns, height=12, selectmode="browse"
-        )
-        outer_frame.grid(row=2, column=0, sticky="nsew", pady=(0, SPACING_SM))
-
-        self.tree = table_result.treeview
-
-        # Set button
-        self.set_btn = make_button(
-            toolbar, text="Set GoPuff Name",
-            fg_colour="WHITE", bg_colour="PRIMARY", bg_shade="MID"
-        )
-        self.set_btn.pack(side="left", padx=(0, SPACING_XS))
-
-        # Status label
-        self.status_label = make_label(
-            toolbar, text=f"{unmapped_count} remaining to map",
-            size="SMALL", italic=True,
-        )
-        self.status_label.pack(side="right", padx=SPACING_XS)
-
-        # Bottom buttons
-        bottom_frame = make_frame(main_frame)
-        bottom_frame.grid(row=3, column=0, sticky="ew", pady=(SPACING_SM, 0))
-
-        self.continue_btn = make_button(
-            bottom_frame, text="Continue",
-            fg_colour="WHITE", bg_colour="SUCCESS"
-        )
-        self.continue_btn.configure(state="disabled")
-        self.continue_btn.pack(side="right", padx=(SPACING_XS, 0))
-
-        self.cancel_btn = make_button(
-            bottom_frame, text="Cancel",
-            fg_colour="WHITE", bg_colour="GREY", bg_shade="DARK"
-        )
-        self.cancel_btn.pack(side="right")
-
-        return self.dialog
-
-    def wire_events(self) -> None:
-        """Wire button commands to callbacks."""
-        if self.on_set_name and self.set_btn:
-            self.set_btn.configure(command=self.on_set_name)
-            self.tree.bind("<Double-1>", lambda e: self.on_set_name())
-        if self.on_continue and self.continue_btn:
-            self.continue_btn.configure(command=self.on_continue)
-        if self.on_cancel and self.cancel_btn:
-            self.cancel_btn.configure(command=self.on_cancel)
-
-    def update_status(self, remaining: int) -> None:
-        """Update status label and continue button state."""
-        if self.status_label:
-            self.status_label.configure(text=f"{remaining} remaining to map")
-        if self.continue_btn:
-            if remaining == 0:
-                self.continue_btn.configure(state="normal")
-            else:
-                self.continue_btn.configure(state="disabled")
-
-    def wait_for_close(self) -> bool:
-        """Block until dialog closes. Returns completion state."""
-        if self.dialog:
-            self.dialog.wait_window()
-        return self.result.get("completed", False)
-
-    def set_completed(self, completed: bool) -> None:
-        """Set completion state before destroying."""
-        self.result["completed"] = completed
-
-    def destroy(self) -> None:
-        """Close and destroy the dialog."""
-        if self.dialog:
-            self.dialog.destroy()
-
-
-class SetGopuffNameDialog:
-    """Dialog design for setting a single GoPuff name.
-
-    Description:
-        Simple input dialog for entering a GoPuff name for a Deliveroo restaurant.
-
-    Attributes:
-        dialog: The Toplevel window.
-        gp_entry: Entry for GoPuff name.
-        save_btn: Save button.
-        cancel_btn: Cancel button.
-        on_save: Callback for save.
-        on_cancel: Callback for cancel.
-    """
-
-    def __init__(self) -> None:
-        self.dialog: Any = None
-        self.gp_entry: Any = None
-        self.save_btn: Any = None
-        self.cancel_btn: Any = None
-
-        # Callbacks
-        self.on_save: Callable[[], None] | None = None
-        self.on_cancel: Callable[[], None] | None = None
-
-    def build(
-        self,
-        parent: Any,
-        deliveroo_name: str,
-        initial_value: str = "",
-    ) -> Any:
-        """Build the input dialog.
-
-        Args:
-            parent: Parent dialog.
-            deliveroo_name: Deliveroo name being mapped (shown as label).
-            initial_value: Initial value for GoPuff name field.
-
-        Returns:
-            The Toplevel dialog window.
-        """
-        from gui.G02a_widget_primitives import (
-            make_dialog, make_frame, make_label, make_entry, make_button,
-            SPACING_XS, SPACING_SM, SPACING_MD,
-        )
-
-        self.dialog = make_dialog(
-            parent,
-            title="Set GoPuff Name",
-            width=450,
-            height=130,
-            modal=True,
-            resizable=False,
-        )
-
-        # Main frame
-        main_frame = make_frame(self.dialog, padding="MD")
-        main_frame.pack(fill="both", expand=True)
-        main_frame.columnconfigure(1, weight=1)
-
-        # Deliveroo name label
-        make_label(
-            main_frame,
-            text=f"Deliveroo: {deliveroo_name}",
-            size="SMALL",
-            bold=True,
-        ).grid(row=0, column=0, columnspan=2, sticky="w", pady=(0, SPACING_SM))
-
-        # GoPuff name entry
-        make_label(main_frame, text="GoPuff Name:", size="SMALL").grid(
-            row=1, column=0, sticky="w", pady=SPACING_XS
-        )
-        self.gp_entry = make_entry(main_frame, width=50)
-        self.gp_entry.grid(row=1, column=1, sticky="ew", pady=SPACING_XS, padx=(SPACING_XS, 0))
-        if initial_value:
-            self.gp_entry.insert(0, initial_value)
-
-        # Button row
-        btn_frame = make_frame(main_frame)
-        btn_frame.grid(row=2, column=0, columnspan=2, pady=(SPACING_MD, 0))
-
-        self.save_btn = make_button(
-            btn_frame, text="Save",
-            fg_colour="WHITE", bg_colour="PRIMARY", bg_shade="MID"
-        )
-        self.save_btn.pack(side="left", padx=SPACING_XS)
-
-        self.cancel_btn = make_button(
-            btn_frame, text="Cancel",
-            fg_colour="WHITE", bg_colour="GREY", bg_shade="MID"
-        )
-        self.cancel_btn.pack(side="left", padx=SPACING_XS)
-
-        self.gp_entry.focus_set()
-
-        return self.dialog
-
-    def wire_events(self) -> None:
-        """Wire button commands to callbacks."""
-        if self.on_save and self.save_btn:
-            self.save_btn.configure(command=self.on_save)
-            if self.gp_entry:
-                self.gp_entry.bind("<Return>", lambda e: self.on_save())
-        if self.on_cancel and self.cancel_btn:
-            self.cancel_btn.configure(command=self.on_cancel)
-
-    def get_value(self) -> str:
-        """Get current GoPuff name value."""
-        return self.gp_entry.get().strip() if self.gp_entry else ""
-
-    def destroy(self) -> None:
-        """Close and destroy the dialog."""
-        if self.dialog:
-            self.dialog.destroy()
-
-
-# ====================================================================================================
-# 98. PUBLIC API SURFACE
+# 6. PUBLIC API SURFACE
 # ----------------------------------------------------------------------------------------------------
 __all__ = [
     # Page class
     "MainPage",
-    # Dialog classes
-    "MfcMappingsDialog",
-    "MfcMappingEntryDialog",
-    "UnmappedMfcDialog",
-    "SetGopuffNameDialog",
     # Configuration constants
     "APP_TITLE",
     "APP_SUBTITLE",
@@ -2062,7 +1485,7 @@ __all__ = [
 
 
 # ====================================================================================================
-# 99. MAIN EXECUTION (SELF-TEST)
+# 7. MAIN EXECUTION (SELF-TEST)
 # ----------------------------------------------------------------------------------------------------
 def main() -> None:
     """

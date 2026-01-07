@@ -1,118 +1,36 @@
-# ====================================================================================================
-# SP4.py
-# ----------------------------------------------------------------------------------------------------
-# Scratchpad script for ad-hoc testing, experiments, and quick validation.
-#
-# IMPORTANT:
-#   - This file is NOT production code.
-#   - This file is NOT part of the Core or GUI libraries.
-#   - This file may be freely modified, reset, or deleted.
-#
-# Intended Use:
-#   - Temporary experiments
-#   - Manual tests
-#   - One-off checks during development
-#
-# ----------------------------------------------------------------------------------------------------
-# Author:       Gerry Pidgeon
-# Created:      2026-01-01
-# Project:      PyBaseEnv
-# ====================================================================================================
+import pandas as pd
 
+# Check if multiple Deliveroo orders share the same key
+dr_file = r"H:\Shared drives\Automation Projects\Accounting\Orders to Cash\04 Deliveroo\04 Consolidated Output\25.12.01 - 26.01.04 - Deliveroo Reconciliation.csv"
+dr_df = pd.read_csv(dr_file, low_memory=False)
 
-# ====================================================================================================
-# 1. SYSTEM IMPORTS
-# ----------------------------------------------------------------------------------------------------
-# These imports (sys, pathlib.Path) are required to correctly initialise the project environment,
-# ensure the core library can be imported safely (including C00_set_packages.py),
-# and prevent project-local paths from overriding installed site-packages.
-# ----------------------------------------------------------------------------------------------------
+# Create match key
+dr_df["order_last4"] = dr_df["order_number"].astype(str).str[-4:]
+dr_df["delivery_date"] = pd.to_datetime(dr_df["delivery_datetime_utc"]).dt.date.astype(str)
+dr_df["match_key"] = dr_df["order_last4"] + "|" + dr_df["mfc_name"] + "|" + dr_df["delivery_date"]
 
-# --- Future behaviour & type system enhancements -----------------------------------------------------
-from __future__ import annotations
+# Check duplicates
+dr_duplicates = dr_df.groupby("match_key").size().reset_index(name="count")
+dr_duplicates = dr_duplicates[dr_duplicates["count"] > 1]
 
-# --- Required for dynamic path handling and safe importing of core modules ---------------------------
-import sys
-from pathlib import Path
+print(f"Duplicate keys in Deliveroo data: {len(dr_duplicates)}")
 
-# --- Ensure project root DOES NOT override site-packages ---------------------------------------------
-project_root = str(Path(__file__).resolve().parent.parent)
-if project_root not in sys.path:
-    sys.path.append(project_root)
+# Check specific problematic order
+print(f"\nLooking up order 50405289095:")
+print(dr_df[dr_df["order_number"] == 50405289095][["order_number", "order_last4", "mfc_name", "delivery_date", "order_value_gross", "marketing_offer_discount"]].to_string())
 
-# --- Remove '' (current working directory) which can shadow installed packages -----------------------
-if "" in sys.path:
-    sys.path.remove("")
+# Check if there are other 9095 orders at same location/date
+print(f"\nAll 9095 orders at LHR_London_1291 on 2025-12-01:")
+mask = (dr_df["order_last4"] == "9095") & (dr_df["mfc_name"] == "LHR_London_1291") & (dr_df["delivery_date"] == "2025-12-01")
+print(dr_df[mask][["order_number", "order_value_gross", "marketing_offer_discount"]].to_string())
 
-# --- Prevent creation of __pycache__ folders ---------------------------------------------------------
-sys.dont_write_bytecode = True
+# Check what's in those duplicate rows
+print("Full details of order 50405289095:")
+cols = ["order_number", "accounting_category", "activity", "order_value_gross", "commission_net", "adjustment_net", "total_payable", "note"]
+print(dr_df[dr_df["order_number"] == 50405289095][[c for c in cols if c in dr_df.columns]].to_string())
 
-
-# ====================================================================================================
-# 2. PROJECT IMPORTS
-# ----------------------------------------------------------------------------------------------------
-# Bring in shared external and standard-library packages from the central import hub.
-#
-# CRITICAL ARCHITECTURE RULE:
-#   ALL external (and commonly-used standard-library) packages must be imported exclusively via:
-#       from core.C00_set_packages import *
-#   No other script may import external libraries directly.
-#
-# This module must not import any GUI packages.
-# ----------------------------------------------------------------------------------------------------
-from core.C00_set_packages import *
-
-# --- Initialise module-level logger ------------------------------------------------------------------
-from core.C01_logging_handler import get_logger, log_exception, init_logging, DEBUG
-logger = get_logger(__name__)
-
-# --- Additional project-level imports (append below this line only) ----------------------------------
-# (Scratchpad-only imports are allowed here, but must still respect C00 rules)
-
-
-# ====================================================================================================
-# 3. SCRATCHPAD IMPLEMENTATION
-# ----------------------------------------------------------------------------------------------------
-# Purpose:
-#   Temporary logic for experimentation and testing.
-#
-# Rules:
-#   - No assumptions of stability or reuse.
-#   - Code here may be deleted or rewritten at any time.
-#   - DO NOT promote logic from this section directly into Core or GUI modules.
-#   - If functionality proves reusable, extract it into the appropriate governed module.
-# ====================================================================================================
-
-
-# ====================================================================================================
-# 99. MAIN EXECUTION / SELF-TEST
-# ----------------------------------------------------------------------------------------------------
-# This section is the ONLY location where runtime execution should occur.
-# Rules:
-#   - No side-effects at import time.
-#   - Initialisation (e.g., logging) must be triggered here.
-#   - Any test or demonstration logic should be gated behind __main__.
-# ====================================================================================================
-
-def main() -> None:
-    """
-    Description:
-        Entry point for scratchpad testing.
-    Args:
-        None.
-    Returns:
-        None.
-    Raises:
-        None.
-    Notes:
-        - This is NOT a production entry point.
-        - Keep logic simple and disposable.
-    """
-    logger.info("SP1 scratchpad started.")
-
-    logger.info("SP1 scratchpad finished.")
-
-
-if __name__ == "__main__":
-    init_logging()
-    main()
+# Check the overall pattern of duplicates
+print("\n\nAccounting category breakdown for duplicate orders:")
+dup_keys = dr_duplicates["match_key"].tolist()
+dup_rows = dr_df[dr_df["match_key"].isin(dup_keys)]
+print(dup_rows["accounting_category"].value_counts())

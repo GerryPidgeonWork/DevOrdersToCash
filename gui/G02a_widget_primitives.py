@@ -1704,7 +1704,7 @@ def make_dialog(
     if modal:
         dialog.grab_set()
     
-    # Center over parent
+    # Center over parent, ensuring dialog stays on-screen
     dialog.update_idletasks()
     parent_x = parent.winfo_rootx()
     parent_y = parent.winfo_rooty()
@@ -1712,6 +1712,13 @@ def make_dialog(
     parent_h = parent.winfo_height()
     x = parent_x + (parent_w - width) // 2
     y = parent_y + (parent_h - height) // 2
+
+    # Ensure dialog stays on-screen (don't go negative or off right/bottom edge)
+    screen_w = dialog.winfo_screenwidth()
+    screen_h = dialog.winfo_screenheight()
+    x = max(0, min(x, screen_w - width))
+    y = max(0, min(y, screen_h - height))
+
     dialog.geometry(f"+{x}+{y}")
     
     return dialog
@@ -1965,6 +1972,66 @@ def show_info(
         messagebox.showinfo(title, message)
 
 
+def show_warning(
+    message: str,
+    title: str = "Warning",
+    parent: tk.Misc | tk.Widget | None = None,
+) -> None:
+    """
+    Description:
+        Show a warning dialog.
+
+    Args:
+        message: Message to display.
+        title: Dialog title.
+        parent: Parent window for the dialog.
+
+    Returns:
+        None.
+
+    Raises:
+        None.
+
+    Notes:
+        Wrapper around tkinter.messagebox.showwarning().
+    """
+    from tkinter import messagebox
+    if parent is not None:
+        messagebox.showwarning(title, message, parent=parent)
+    else:
+        messagebox.showwarning(title, message)
+
+
+def show_error(
+    message: str,
+    title: str = "Error",
+    parent: tk.Misc | tk.Widget | None = None,
+) -> None:
+    """
+    Description:
+        Show an error dialog.
+
+    Args:
+        message: Message to display.
+        title: Dialog title.
+        parent: Parent window for the dialog.
+
+    Returns:
+        None.
+
+    Raises:
+        None.
+
+    Notes:
+        Wrapper around tkinter.messagebox.showerror().
+    """
+    from tkinter import messagebox
+    if parent is not None:
+        messagebox.showerror(title, message, parent=parent)
+    else:
+        messagebox.showerror(title, message)
+
+
 # ====================================================================================================
 # 98. PUBLIC API SURFACE
 # ----------------------------------------------------------------------------------------------------
@@ -2012,7 +2079,7 @@ __all__ = [
     "page_title", "page_subtitle", "section_title", "body_text", "small_text", "meta_text", "divider",
     # Dialog functions
     "make_dialog", "ask_directory", "ask_open_file", "ask_open_files", "ask_save_file",
-    "ask_yes_no", "ask_ok_cancel", "show_info",
+    "ask_yes_no", "ask_ok_cancel", "show_info", "show_warning", "show_error",
 ]
 
 

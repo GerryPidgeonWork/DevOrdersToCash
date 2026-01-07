@@ -79,16 +79,14 @@ logger = get_logger(__name__)
 from gui.G02a_widget_primitives import (
     EventType,
     ask_directory,
-    ask_yes_no,
-    SPACING_XS,
+    show_warning,
+    show_error,
 )
 
-# Dialog designs from G10a (controller wires callbacks)
-from gui.G10a_gui_design import (
-    MfcMappingsDialog,
-    MfcMappingEntryDialog,
-    UnmappedMfcDialog,
-    SetGopuffNameDialog,
+# Deliveroo dialogs (controller functions from G20b)
+from gui.G20b_deliveroo_dialogs_controller import (
+    show_mfc_mappings_dialog,
+    show_unmapped_mfc_dialog,
 )
 
 # Core utilities
@@ -113,8 +111,7 @@ from core.C19_google_drive_integration import (
 # Snowflake integration
 from core.C14_snowflake_connector import connect_to_snowflake
 
-# GUI helpers
-from core.C20_gui_helpers import show_error, show_warning
+# GUI helpers (show_error, show_warning now imported from G02a with parent support)
 
 # Design layer
 from gui.G10a_gui_design import (
@@ -133,6 +130,7 @@ from gui.G10a_gui_design import (
 # Just Eat backend modules
 from implementation.just_eat.JE01_parse_pdfs import run_je_pdf_parser
 from implementation.just_eat.JE02_data_reconciliation import run_je_reconciliation
+from implementation.just_eat.JE03_accounting_output import run_je_accounting_output
 
 # Deliveroo backend modules
 from implementation.deliveroo.DR001_parse_csvs import run_dr_csv_parser, get_unmapped_mfcs
@@ -1272,7 +1270,7 @@ class MainPageController:
 
         csv_folder = provider_paths.get("01_csvs_01_to_process")
         output_folder = provider_paths.get("04_consolidated_output")
-        reference_folder = provider_paths.get("02_pdfs_03_reference")
+        reference_folder = provider_paths.get("01_csvs_03_reference")
 
         if not csv_folder or not output_folder or not reference_folder:
             self._log_to_console("Deliveroo Step 1: Provider paths not configured.")
@@ -1450,149 +1448,23 @@ class MainPageController:
 
         Description:
             Opens a modal dialog showing current Deliveroo → GoPuff MFC name mappings.
-            Users can add new mappings or delete existing ones.
-            Changes are saved immediately to the CSV file on the shared drive.
-            Uses MfcMappingsDialog design from G10a.
+            Delegates to G20b controller function.
         """
-        from implementation.I01_project_set_file_paths import initialise_provider_paths, get_provider_paths
-        from implementation.I02_project_shared_functions import load_mfc_mapping, save_mfc_mapping
-        from gui.G03d_table_patterns import insert_rows_zebra, get_selected_values
-
-        # 1. Check Google Drive is selected
-        drive_root = self.design.google_drive_selected_root
-        if not drive_root:
-            show_warning("Please select a Google Drive account first.")
-            return
-
-        # 2. Get reference folder path
-        initialise_provider_paths(drive_root)
-        provider_paths = get_provider_paths("deliveroo")
-
-        if not provider_paths:
-            show_error("Failed to initialise Deliveroo paths.")
-            return
-
-        reference_folder = provider_paths.get("02_pdfs_03_reference")
-        if not reference_folder:
-            show_error("Reference folder path not configured.\nExpected: 02 PDFs/03 Reference")
-            return
-
-        # 3. Load current mappings
-        mappings = load_mfc_mapping(reference_folder)
-
-        # 4. Get root window and create dialog design
         root_window = self.design.console_text.winfo_toplevel()
+        drive_root = self.design.google_drive_selected_root
 
-        dialog_design = MfcMappingsDialog()
-        dialog_design.build(root_window)
-
-        def refresh_table() -> None:
-            """Clear and repopulate the table with zebra striping."""
-            rows = [(dr_name, gp_name) for dr_name, gp_name in sorted(mappings.items())]
-            insert_rows_zebra(dialog_design.tree, rows, clear_existing=True)
-            dialog_design.update_count(len(mappings))
-
-        def on_add() -> None:
-            """Open entry dialog to add a new mapping."""
-            entry_design = MfcMappingEntryDialog()
-            entry_design.build(dialog_design.dialog, title="Add MFC Mapping")
-
-            def do_save() -> None:
-                dr_name, gp_name = entry_design.get_values()
-                if not dr_name or not gp_name:
-                    messagebox.showwarning("Validation", "Both fields are required.", parent=entry_design.dialog)
-                    return
-
-                mappings[dr_name] = gp_name
-                if save_mfc_mapping(reference_folder, mappings):
-                    refresh_table()
-                    self._log_to_console(f"MFC Mapping added: {dr_name} → {gp_name}")
-                    entry_design.destroy()
-                else:
-                    messagebox.showerror("Error", "Failed to save mapping.", parent=entry_design.dialog)
-
-            entry_design.on_save = do_save
-            entry_design.on_cancel = entry_design.destroy
-            entry_design.wire_events()
-
-        def on_edit() -> None:
-            """Open entry dialog to edit the selected mapping."""
-            selected = get_selected_values(dialog_design.tree)
-            if not selected:
-                messagebox.showwarning("Selection", "Please select a mapping to edit.", parent=dialog_design.dialog)
-                return
-
-            old_dr_name = selected[0][0]
-            old_gp_name = selected[0][1]
-
-            entry_design = MfcMappingEntryDialog()
-            entry_design.build(
-                dialog_design.dialog,
-                title="Edit MFC Mapping",
-                initial_dr_name=old_dr_name,
-                initial_gp_name=old_gp_name,
-            )
-
-            def do_save() -> None:
-                new_dr_name, new_gp_name = entry_design.get_values()
-                if not new_dr_name or not new_gp_name:
-                    messagebox.showwarning("Validation", "Both fields are required.", parent=entry_design.dialog)
-                    return
-
-                # Remove old mapping if key changed
-                if new_dr_name != old_dr_name and old_dr_name in mappings:
-                    del mappings[old_dr_name]
-
-                mappings[new_dr_name] = new_gp_name
-
-                if save_mfc_mapping(reference_folder, mappings):
-                    refresh_table()
-                    self._log_to_console(f"MFC Mapping updated: {new_dr_name} → {new_gp_name}")
-                    entry_design.destroy()
-                else:
-                    messagebox.showerror("Error", "Failed to save mapping.", parent=entry_design.dialog)
-
-            entry_design.on_save = do_save
-            entry_design.on_cancel = entry_design.destroy
-            entry_design.wire_events()
-
-        def on_delete() -> None:
-            """Delete the selected mapping."""
-            selected = get_selected_values(dialog_design.tree)
-            if not selected:
-                messagebox.showwarning("Selection", "Please select a mapping to delete.", parent=dialog_design.dialog)
-                return
-
-            dr_name = selected[0][0]
-
-            if messagebox.askyesno("Confirm Delete", f"Delete mapping for '{dr_name}'?", parent=dialog_design.dialog):
-                if dr_name in mappings:
-                    del mappings[dr_name]
-                    if save_mfc_mapping(reference_folder, mappings):
-                        refresh_table()
-                        self._log_to_console(f"MFC Mapping deleted: {dr_name}")
-                    else:
-                        messagebox.showerror("Error", "Failed to save after deletion.", parent=dialog_design.dialog)
-
-        # Wire callbacks and events
-        dialog_design.on_add = on_add
-        dialog_design.on_edit = on_edit
-        dialog_design.on_delete = on_delete
-        dialog_design.on_close = dialog_design.destroy
-        dialog_design.wire_events()
-
-        # Initial table load
-        refresh_table()
-
-        self._log_to_console(f"MFC Mappings dialog opened ({len(mappings)} mappings)")
+        show_mfc_mappings_dialog(
+            parent=root_window,
+            drive_root=drive_root,
+            log_callback=self._log_to_console,
+        )
 
     def _show_unmapped_mfc_dialog(self, unmapped: List[str], reference_folder: Path) -> bool:
         """Show dialog prompting user to map unmapped MFC names.
 
         Description:
             Displays a modal dialog with all unmapped Deliveroo restaurant names.
-            User must provide GoPuff name for each before continuing.
-            Uses UnmappedMfcDialog design from G10a.
+            Delegates to G20b controller function.
 
         Args:
             unmapped: List of unmapped Deliveroo restaurant names.
@@ -1601,87 +1473,13 @@ class MainPageController:
         Returns:
             bool: True if all mappings were provided, False if cancelled.
         """
-        from implementation.I02_project_shared_functions import load_mfc_mapping, save_mfc_mapping
-        from gui.G03d_table_patterns import insert_rows_zebra, get_selected_values
-
-        # Load existing mappings to add to
-        mappings = load_mfc_mapping(reference_folder)
-
-        # Track pending mappings (initially all unmapped have empty GoPuff name)
-        pending_mappings: Dict[str, str] = {name: "" for name in unmapped}
-
-        # Get root window and create dialog design
         root_window = self.design.console_text.winfo_toplevel()
 
-        dialog_design = UnmappedMfcDialog()
-        dialog_design.build(root_window, unmapped_count=len(unmapped))
-
-        def refresh_table() -> None:
-            """Clear and repopulate the table with zebra striping."""
-            rows = [(dr_name, gp_name or "(not set)") for dr_name, gp_name in sorted(pending_mappings.items())]
-            insert_rows_zebra(dialog_design.tree, rows, clear_existing=True)
-
-            # Count how many are still unmapped
-            remaining = sum(1 for v in pending_mappings.values() if not v)
-            dialog_design.update_status(remaining)
-
-        def on_set_name() -> None:
-            """Open dialog to set GoPuff name for selected row."""
-            selected = get_selected_values(dialog_design.tree)
-            if not selected:
-                messagebox.showwarning("Selection", "Please select a row to map.", parent=dialog_design.dialog)
-                return
-
-            dr_name = selected[0][0]
-            current_gp = pending_mappings.get(dr_name, "")
-            if current_gp == "(not set)":
-                current_gp = ""
-
-            input_design = SetGopuffNameDialog()
-            input_design.build(dialog_design.dialog, deliveroo_name=dr_name, initial_value=current_gp)
-
-            def do_save() -> None:
-                gp_name = input_design.get_value()
-                if not gp_name:
-                    messagebox.showwarning("Validation", "GoPuff name is required.", parent=input_design.dialog)
-                    return
-
-                pending_mappings[dr_name] = gp_name
-                refresh_table()
-                input_design.destroy()
-
-            input_design.on_save = do_save
-            input_design.on_cancel = input_design.destroy
-            input_design.wire_events()
-
-        def on_continue() -> None:
-            """Save all mappings and close dialog."""
-            for dr_name, gp_name in pending_mappings.items():
-                if gp_name:
-                    mappings[dr_name] = gp_name
-
-            if save_mfc_mapping(reference_folder, mappings):
-                dialog_design.set_completed(True)
-                dialog_design.destroy()
-            else:
-                messagebox.showerror("Error", "Failed to save mappings.", parent=dialog_design.dialog)
-
-        def on_cancel() -> None:
-            """Cancel without saving."""
-            dialog_design.set_completed(False)
-            dialog_design.destroy()
-
-        # Wire callbacks and events
-        dialog_design.on_set_name = on_set_name
-        dialog_design.on_continue = on_continue
-        dialog_design.on_cancel = on_cancel
-        dialog_design.wire_events()
-
-        # Initial table load
-        refresh_table()
-
-        # Wait for dialog to close and return result
-        return dialog_design.wait_for_close()
+        return show_unmapped_mfc_dialog(
+            parent=root_window,
+            unmapped=unmapped,
+            reference_folder=reference_folder,
+        )
 
     # ------------------------------------------------------------------------------------------------
     # JUST EAT CONTROLLER
@@ -1709,6 +1507,9 @@ class MainPageController:
 
         if self.design.je_step2_btn:
             self.design.je_step2_btn.configure(command=self._on_je_step2_clicked)
+
+        if self.design.je_step3_btn:
+            self.design.je_step3_btn.configure(command=self._on_je_step3_clicked)
 
         # Initial sync of statement dates from accounting period
         self._sync_je_statement_period()
@@ -2112,7 +1913,7 @@ class MainPageController:
 
         Args:
             dwh_folder: Path to DWH CSV folder.
-            output_folder: Path to output folder (also contains JE Order Level Detail).
+            output_folder: Path to output folder (also contains Justeat Order Level Detail).
             acc_start: Accounting period start date.
             acc_end: Accounting period end date.
             stmt_start: Statement start Monday date.
@@ -2148,6 +1949,121 @@ class MainPageController:
         finally:
             # Re-enable button
             self.design.je_step2_btn.configure(state="normal")
+
+    def _on_je_step3_clicked(self) -> None:
+        """Handle Just Eat Step 3 button click - Produce Accounting Output.
+
+        Description:
+            Validates prerequisites, gets all required dates, and runs
+            JE03_accounting_output in a background thread.
+        """
+        from implementation.I01_project_set_file_paths import initialise_provider_paths, get_provider_paths
+
+        # 1. Check Google Drive is selected
+        drive_root = self.design.google_drive_selected_root
+        if not drive_root:
+            self._log_to_console("Just Eat Step 3: Please select a Google Drive account first.")
+            show_warning("Please select a Google Drive account first.")
+            return
+
+        # 2. Initialise provider paths first (needed to get folders)
+        initialise_provider_paths(drive_root)
+
+        # 3. Get Just Eat folder paths
+        try:
+            je_paths = get_provider_paths("justeat")
+            output_folder = je_paths.get("04_consolidated_output")
+
+            if not output_folder:
+                self._log_to_console("Just Eat Step 3: Provider paths not configured.")
+                show_error("Just Eat folder paths not configured.\nCheck I01_project_set_file_paths.")
+                return
+        except KeyError as e:
+            self._log_to_console(f"Just Eat Step 3: {e}")
+            show_error(f"Provider paths error:\n{e}")
+            return
+
+        # 4. Get accounting dates
+        acc_start, acc_end = self.get_accounting_dates()
+
+        # 5. Get statement dates
+        dates = self._get_je_statement_dates()
+        if dates is None:
+            self._log_to_console("Just Eat Step 3: Invalid statement dates.")
+            show_warning("Please select valid statement dates.")
+            return
+
+        stmt_start, stmt_end_monday, stmt_end_sunday = dates
+
+        # 6. Validate date range
+        if stmt_end_sunday < stmt_start:
+            self._log_to_console("Just Eat Step 3: End date must be after start date.")
+            show_warning("End date must be after start date.")
+            return
+
+        # 7. Disable button and update status
+        self.design.je_step3_btn.configure(state="disabled")
+        self._log_to_console(f"Just Eat Step 3: Producing accounting output...")
+        self._log_to_console(f"  Accounting: {acc_start} → {acc_end}")
+        self._log_to_console(f"  Statement:  {stmt_start} → {stmt_end_sunday}")
+
+        # 8. Run in background thread
+        threading.Thread(
+            target=self._run_je_step3_thread,
+            args=(
+                output_folder,
+                acc_start,
+                acc_end,
+                stmt_start,
+                stmt_end_monday,
+            ),
+            daemon=True,
+        ).start()
+
+    def _run_je_step3_thread(
+        self,
+        output_folder: Path,
+        acc_start: date,
+        acc_end: date,
+        stmt_start: date,
+        stmt_end_monday: date,
+    ) -> None:
+        """Execute Just Eat Step 3 (Accounting Output) in background thread.
+
+        Args:
+            output_folder: Path to output folder (contains reconciliation CSV).
+            acc_start: Accounting period start date.
+            acc_end: Accounting period end date.
+            stmt_start: Statement start Monday date.
+            stmt_end_monday: Statement end Monday date.
+        """
+        try:
+            result = run_je_accounting_output(
+                output_folder=output_folder,
+                acc_start=acc_start,
+                acc_end=acc_end,
+                stmt_start=stmt_start,
+                stmt_end_monday=stmt_end_monday,
+                log_callback=self._log_to_console,
+            )
+
+            if result:
+                self._log_to_console(f"✅ Just Eat Step 3 complete: {result.name}")
+            else:
+                self._log_to_console("⚠️ Just Eat Step 3: No output generated.")
+
+        except FileNotFoundError as e:
+            self._log_to_console(f"❌ Just Eat Step 3: {e}")
+            show_error(f"File not found:\n{e}\n\nHave you run Step 2 first?")
+
+        except Exception as e:
+            log_exception(e, context="Just Eat Step 3")
+            self._log_to_console(f"❌ Just Eat Step 3 error: {e}")
+            show_error(f"Just Eat Step 3 failed:\n{e}")
+
+        finally:
+            # Re-enable button
+            self.design.je_step3_btn.configure(state="normal")
 
 
 # ====================================================================================================

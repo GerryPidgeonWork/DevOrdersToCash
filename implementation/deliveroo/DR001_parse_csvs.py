@@ -15,7 +15,7 @@
 #       csv_folder=Path("..."),
 #       output_folder=Path("..."),
 #       stmt_start=date(2025, 11, 4),
-#       stmt_end_sunday=date(2025, 11, 30),
+#       stmt_end_monday=date(2025, 11, 25),
 #       log_callback=print,
 #   )
 #
@@ -648,13 +648,10 @@ def run_dr_csv_parser(
     # -----------------------------------------------------------------------------------------
     # Step 5: Save output CSV
     # -----------------------------------------------------------------------------------------
-    # Get the actual date range from processed files (dates guaranteed non-None at this point)
-    first_date = get_file_date(matching_files[0]) or stmt_start
-    last_date = get_file_date(matching_files[-1]) or stmt_end_sunday
-
+    # Use statement period dates for filename (Monday start to Sunday end)
     output_filename = (
-        f"{format_date(first_date, '%y.%m.%d')} - "
-        f"{format_date(last_date, '%y.%m.%d')} - "
+        f"{format_date(stmt_start, '%y.%m.%d')} - "
+        f"{format_date(stmt_end_sunday, '%y.%m.%d')} - "
         f"Deliveroo Combined.csv"
     )
     output_path = output_folder / output_filename

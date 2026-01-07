@@ -6,7 +6,7 @@
 # Purpose:
 #   - Extract order, refund, commission, and marketing data from Just Eat statement PDFs.
 #   - Filter PDFs by statement period (Monday → Sunday weeks).
-#   - Output consolidated CSV: "JE Order Level Detail.csv"
+#   - Output consolidated CSV: "Justeat Order Level Detail.csv"
 #
 # Usage:
 #   from implementation.justeat.JE01_parse_pdfs import run_je_pdf_parser
@@ -198,7 +198,14 @@ def extract_descriptions(segment_text: str) -> List[str]:
         if not merged:
             merged.append(ln)
             continue
+        # Start new entry if:
+        # - Line begins with uppercase, OR
+        # - Line begins with digit AND has '%' early (e.g., "80% off...") - marketing item
+        # Otherwise merge (handles orphaned order numbers like "749030039 (Outside the scope of VAT)")
         if ln[0].isupper():
+            merged.append(ln)
+        elif ln[0].isdigit() and '%' in ln[:5]:
+            # Marketing line starting with percentage (e.g., "80% off £15 Offer Rebate")
             merged.append(ln)
         else:
             merged[-1] += " " + ln
@@ -482,14 +489,28 @@ def process_single_pdf(
         df_full["description"].str.contains("Commission", case=False, na=False)
     ]["amount"].sum() if not df_full.empty else 0.0
 
-    marketing_sum = df_full[
+    # Marketing mask: non-commission items with no refund reason
+    marketing_mask = (
         (~df_full["description"].str.contains("Commission", case=False, na=False))
         & (df_full["reason"].eq(""))
-    ]["amount"].sum() if not df_full.empty else 0.0
+    ) if not df_full.empty else pd.Series(dtype=bool)
 
-    # VAT uplift (commission/marketing are exc VAT in the PDF)
+    # Marketing WITH VAT: outside_scope = False (needs 1.20 uplift)
+    marketing_vat_sum = (
+        df_full[marketing_mask & ~df_full["outside_scope"]]["amount"].sum()
+        if not df_full.empty and marketing_mask.any() else 0.0
+    )
+
+    # Marketing WITHOUT VAT: outside_scope = True (no uplift needed)
+    marketing_no_vat_sum = (
+        df_full[marketing_mask & df_full["outside_scope"]]["amount"].sum()
+        if not df_full.empty and marketing_mask.any() else 0.0
+    )
+
+    # VAT uplift for commission and marketing with VAT
     commission_incl_vat = round(commission_sum * 1.20 * -1, 2)
-    marketing_incl_vat = round(marketing_sum * 1.20 * -1, 2)
+    marketing_vat_incl = round(marketing_vat_sum * 1.20 * -1, 2)
+    marketing_no_vat_incl = round(marketing_no_vat_sum * -1, 2)
 
     # 6) Save per-PDF refund detail (optional)
     if refund_folder and not df_full.empty:
@@ -556,14 +577,29 @@ def process_single_pdf(
             "reason": "",
         }]))
 
-    if marketing_sum != 0:
+    if marketing_vat_sum != 0:
         combined_rows.append(pd.DataFrame([{
             "order_id": "",
             "date": statement_start,
-            "order_type": "Marketing",
+            "order_type": "Marketing (VAT)",
             "refund_amount": 0.0,
             "type": "Marketing",
-            "total_incl_vat": marketing_incl_vat,
+            "total_incl_vat": marketing_vat_incl,
+            "source_file": pdf_path.name,
+            "statement_start": statement_start,
+            "statement_end": statement_end,
+            "payment_date": payment_date,
+            "reason": "",
+        }]))
+
+    if marketing_no_vat_sum != 0:
+        combined_rows.append(pd.DataFrame([{
+            "order_id": "",
+            "date": statement_start,
+            "order_type": "Marketing (Non-VAT)",
+            "refund_amount": 0.0,
+            "type": "Marketing",
+            "total_incl_vat": marketing_no_vat_incl,
             "source_file": pdf_path.name,
             "statement_start": statement_start,
             "statement_end": statement_end,
@@ -580,13 +616,12 @@ def process_single_pdf(
     refund_sum_lines = (
         df_refunds_by_order["amount"].sum() if not df_refunds_by_order.empty else 0.0
     )
-    subtotal_all = df_full["amount"].sum() if not df_full.empty else 0.0
-    vat_deductions = (
-        df_full.loc[~df_full["outside_scope"], "amount"].sum()
+    # Refunds only: outside_scope items that have a refund reason (not marketing)
+    refund_total_calc = (
+        df_full.loc[df_full["outside_scope"] & df_full["reason"].ne(""), "amount"].sum()
         if not df_full.empty
         else 0.0
     )
-    refund_total_calc = subtotal_all - vat_deductions
     refund_sum_lines_signed = -refund_sum_lines
 
     derived_receive = None
@@ -596,7 +631,8 @@ def process_single_pdf(
             reported_total_sales
             + refund_sum_lines_signed
             + commission_incl_vat
-            + marketing_incl_vat
+            + marketing_vat_incl
+            + marketing_no_vat_incl
         )
         diff_receive = round(derived_receive - reported_you_receive, 2)
 
@@ -622,8 +658,9 @@ def process_single_pdf(
         f"   Header Payout: £{(reported_you_receive or 0):,.2f} | Parsed Payout: £{(derived_receive or 0):,.2f} "
         f"→ Variance: £{(diff_receive or 0):+.2f}"
     )
-    log(f"   Commission + VAT uplift: £{commission_incl_vat:,.2f}")
-    log(f"   Marketing + VAT uplift:  £{marketing_incl_vat:,.2f}")
+    log(f"   Commission + VAT uplift:    £{commission_incl_vat:,.2f}")
+    log(f"   Marketing (VAT) + uplift:   £{marketing_vat_incl:,.2f}")
+    log(f"   Marketing (Non-VAT):        £{marketing_no_vat_incl:,.2f}")
     if payment_date:
         # AUDIT: Use format_date from C07 instead of direct .strftime()
         log(f"   💰 Payment Date: {format_date(payment_date, '%d %b %Y')}")
@@ -661,7 +698,7 @@ def run_je_pdf_parser(
 
     Notes:
         - Filters PDFs by date overlap with statement period.
-        - Output filename: "YY.MM.DD - YY.MM.DD - JE Order Level Detail.csv"
+        - Output filename: "YY.MM.DD - YY.MM.DD - Justeat Order Level Detail.csv"
     """
     def log(msg: str) -> None:
         logger.info(msg)
@@ -753,7 +790,7 @@ def run_je_pdf_parser(
     output_filename = (
         f"{format_date(stmt_start, '%y.%m.%d')} - "
         f"{format_date(stmt_end_monday, '%y.%m.%d')} - "
-        f"JE Order Level Detail.csv"
+        f"Justeat Order Level Detail.csv"
     )
     output_path = output_folder / output_filename
 

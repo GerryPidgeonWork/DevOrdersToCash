@@ -5,7 +5,7 @@
 #
 # Purpose:
 #   - Load DWH data from monthly extracts (in memory, filtered by period).
-#   - Load JE Order Level Detail CSV (from JE01).
+#   - Load Justeat Order Level Detail CSV (from JE01).
 #   - Merge and reconcile: match orders, identify missing, calculate accruals.
 #   - Output final reconciliation CSV.
 #
@@ -190,7 +190,7 @@ def load_dwh_for_period(
 
 
 # ====================================================================================================
-# 4. JE ORDER LEVEL DETAIL LOADING
+# 4. JUSTEAT ORDER LEVEL DETAIL LOADING
 # ====================================================================================================
 
 def load_je_order_detail(
@@ -201,7 +201,7 @@ def load_je_order_detail(
 ) -> pd.DataFrame:
     """
     Description:
-        Load the JE Order Level Detail CSV produced by JE01.
+        Load the Justeat Order Level Detail CSV produced by JE01.
 
     Args:
         output_folder (Path): Folder containing the CSV.
@@ -210,7 +210,7 @@ def load_je_order_detail(
         log_callback (Callable | None): Optional callback for progress logging.
 
     Returns:
-        pd.DataFrame: JE order level detail data.
+        pd.DataFrame: Justeat Order level detail data.
 
     Raises:
         FileNotFoundError: If expected file not found.
@@ -223,13 +223,13 @@ def load_je_order_detail(
     # Use C07's format_date for consistent date formatting
     start_str = format_date(stmt_start, "%y.%m.%d")
     end_str = format_date(stmt_end_monday, "%y.%m.%d")
-    expected_filename = f"{start_str} - {end_str} - JE Order Level Detail.csv"
+    expected_filename = f"{start_str} - {end_str} - Justeat Order Level Detail.csv"
     je_file = output_folder / expected_filename
 
     if not file_exists(je_file):
-        available = [f.name for f in output_folder.glob("*JE Order Level Detail*.csv")]
+        available = [f.name for f in output_folder.glob("*Justeat Order Level Detail*.csv")]
         raise FileNotFoundError(
-            f"❌ Missing JE Order Level Detail file: {expected_filename}\n"
+            f"❌ Missing Justeat Order Level Detail file: {expected_filename}\n"
             f"Available files: {', '.join(available) or 'None'}\n"
             f"Please run Step 1 (Parse PDFs) first."
         )
@@ -270,7 +270,7 @@ def merge_je_with_dwh(
         Merge JE data with DWH data by order ID.
 
     Args:
-        je_df (pd.DataFrame): JE Order Level Detail data.
+        je_df (pd.DataFrame): Justeat Order Level Detail data.
         dwh_df (pd.DataFrame): DWH data.
         log_callback (Callable | None): Optional callback for progress logging.
 
@@ -550,7 +550,7 @@ def run_je_reconciliation(
 
     Args:
         dwh_folder (Path): Folder containing DWH CSV files.
-        output_folder (Path): Folder for output (also contains JE Order Level Detail).
+        output_folder (Path): Folder for output (also contains Justeat Order Level Detail).
         acc_start (date): Accounting period start.
         acc_end (date): Accounting period end.
         stmt_start (date): Statement period start (Monday).
@@ -586,9 +586,9 @@ def run_je_reconciliation(
         log("▶ Step 1: Load DWH Data")
         dwh_df = load_dwh_for_period(dwh_folder, acc_start, acc_end, log_callback)
 
-        # 2) Load JE Order Level Detail
+        # 2) Load Justeat Order Level Detail
         log("")
-        log("▶ Step 2: Load JE Order Level Detail")
+        log("▶ Step 2: Load Justeat Order Level Detail")
         je_df = load_je_order_detail(output_folder, stmt_start, stmt_end_monday, log_callback)
 
         # 3) Merge JE with DWH
